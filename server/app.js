@@ -1,9 +1,12 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const Order = require("./models/order.js");
+const cors = require("cors");
 require("dotenv").config();
 
 const app = express();
+
+app.use(cors());
 
 main()
     .then(() => {
