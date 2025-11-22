@@ -27,6 +27,18 @@ const orderSchema = new Schema({
         default:
             "https://res.cloudinary.com/dfq3xkwrk/image/upload/v1762187021/ChatGPT_Image_Nov_3_2025_09_51_44_PM_ausbho.png",
     },
+    weight: {
+        type: Number,
+        required: true,
+    },
+    distance: {
+        type: Number,
+        required: true,
+    },
+    price: {
+        type: Number,
+        required: true,
+    },
 });
 
 const Order = mongoose.model("Order", orderSchema);

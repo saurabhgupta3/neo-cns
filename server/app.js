@@ -7,6 +7,7 @@ require("dotenv").config();
 const app = express();
 
 app.use(cors());
+app.use(express.urlencoded({extended: true}));
 
 main()
     .then(() => {
@@ -28,6 +29,13 @@ app.get("/orders", async (req, res) => {
     const allOrders = await Order.find({});
     console.log("success");
     res.json(allOrders);
+});
+
+app.get("/orders/:id", async (req, res) => {
+    let {id} = req.params;
+    const order = await Order.findById(id);
+    res.json(order);
+
 })
 
 // app.get("/testing", async (req, res) => {
