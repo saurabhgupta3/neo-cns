@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const initData = require("./data.js");
 const Order = require("../models/order.js");
+const {calculateDistance, calculatePrice} = require("../utils/orderUtils.js");
 require("dotenv").config({ path: '../.env' });
 
 main()
@@ -10,17 +11,6 @@ main()
 async function main() {
   await mongoose.connect(process.env.MONGO_URL);
 }
-
-const calculateDistance = () => {
-  return Math.floor(Math.random() * 1720) + 80;
-};
-
-const calculatePrice = (weight, distance) => {
-  const baseCharge = 50;
-  const perKmCharge = 0.9;
-  const perKgCharge = 12;
-  return Math.round(baseCharge + (distance * perKmCharge) + (weight * perKgCharge));
-};
 
 const initDB = async () => {
   await Order.deleteMany({});
