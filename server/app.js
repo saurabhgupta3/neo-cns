@@ -48,6 +48,16 @@ app.post("/orders", async (req, res) => {
     await newOrder.save();
     console.log("order is saved");
     res.json(newOrder);
+});
+
+app.put("/orders/:id", async (req, res) => {
+    let {id} = req.params;
+    const orderData = req.body;
+    orderData.distance = calculateDistance(orderData.pickupAddress, orderData.deliveryAddress);
+    orderData.price = calculatePrice(orderData.weight, orderData.distance);
+    const updatedOrder = await Order.findByIdAndUpdate(id, {...orderData}, {new: true});
+    console.log("order is edited");
+    res.json(updatedOrder);
 })
 
 // app.get("/testing", async (req, res) => {

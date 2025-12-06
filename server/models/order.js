@@ -24,8 +24,13 @@ const orderSchema = new Schema({
     },
     image: {
         type: String,
-        default:
-            "https://res.cloudinary.com/dfq3xkwrk/image/upload/v1762187021/ChatGPT_Image_Nov_3_2025_09_51_44_PM_ausbho.png",
+        default: "https://res.cloudinary.com/dfq3xkwrk/image/upload/v1762187021/ChatGPT_Image_Nov_3_2025_09_51_44_PM_ausbho.png",
+        set: (value) => {
+            if (value === "" || value === null || value === undefined) {
+                return "https://res.cloudinary.com/dfq3xkwrk/image/upload/v1762187021/ChatGPT_Image_Nov_3_2025_09_51_44_PM_ausbho.png";
+            }
+            return value;
+        }
     },
     weight: {
         type: Number,

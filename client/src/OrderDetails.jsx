@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
-import { useParams } from "react-router-dom"
+import { useParams } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 export default function OrderDetails() {
     const {id} = useParams();
@@ -25,6 +26,7 @@ export default function OrderDetails() {
                 e.target.src = "https://res.cloudinary.com/dfq3xkwrk/image/upload/v1762187021/ChatGPT_Image_Nov_3_2025_09_51_44_PM_ausbho.png"; 
             }}/>
             <p><strong>Price:</strong> &#8377;{order.price.toLocaleString("en-IN")}</p>
+            <Link to={`/orders/${id}/edit`}><button>edit this order</button></Link>
         </div>
     )
 }
