@@ -58,6 +58,13 @@ app.put("/orders/:id", async (req, res) => {
     const updatedOrder = await Order.findByIdAndUpdate(id, {...orderData}, {new: true});
     console.log("order is edited");
     res.json(updatedOrder);
+});
+
+app.delete("/orders/:id", async (req, res) => {
+    let {id} = req.params;
+    const deletedOrder = await Order.findByIdAndDelete(id);
+    console.log(deletedOrder);
+    res.json(deletedOrder);
 })
 
 // app.get("/testing", async (req, res) => {

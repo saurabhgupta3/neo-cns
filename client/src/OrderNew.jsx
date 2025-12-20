@@ -28,7 +28,6 @@ export default function OrderNew() {
 
         const data = await res.json();
         console.log("Order created:", data);
-        alert("Order created successfully!");
         navigate("/orders");
     };
 

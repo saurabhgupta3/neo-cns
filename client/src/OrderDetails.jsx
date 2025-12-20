@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react"
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
+
 
 export default function OrderDetails() {
     const {id} = useParams();
     const [order, setOrder] = useState(null);
+    const navigate = useNavigate();
 
     useEffect(() => {
         fetch(`http://localhost:8080/orders/${id}`)
@@ -12,6 +14,15 @@ export default function OrderDetails() {
         .then(data => setOrder(data))
         .catch(err => console.error("error fetching order: ", err));
     }, [id]);
+
+    const handleDelete = () => {
+        fetch(`http://localhost:8080/orders/${id}`, {
+            method: "DELETE",
+        }).then(res => {
+            if(!res.ok) throw new Error();
+            navigate("/orders");
+        }).catch(err => console.error(err));
+    }
     if(!order) return <p>Loading...</p>
     return (
         <div>
@@ -27,6 +38,8 @@ export default function OrderDetails() {
             }}/>
             <p><strong>Price:</strong> &#8377;{order.price.toLocaleString("en-IN")}</p>
             <Link to={`/orders/${id}/edit`}><button>edit this order</button></Link>
+            <br /><br />
+            <button onClick={handleDelete}>Delete this order</button>
         </div>
     )
 }

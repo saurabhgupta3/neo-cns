@@ -5,14 +5,6 @@ export default function OrderEdit() {
     const {id} = useParams();
     const navigate = useNavigate();
     const [order, setOrder] = useState(null);
-    const [formData, setFormData] = useState({
-        senderName: "",
-        receiverName: "",
-        pickupAddress: "",
-        deliveryAddress: "",
-        image: "",
-        weight: ""
-    });
     useEffect(() => {
         fetch(`http://localhost:8080/orders/${id}`)
         .then(res => res.json())
@@ -33,7 +25,6 @@ export default function OrderEdit() {
 
         const data = await res.json();
         console.log("Order edited:", data);
-        alert("Order edited successfully!");
         navigate(`/orders/${id}`);
     };
     if(!order) return <p>Loading...</p>
