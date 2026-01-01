@@ -5,19 +5,21 @@ import OrdersList from "./OrdersList";
 import OrderDetails from './OrderDetails';
 import OrderNew from './OrderNew';
 import OrderEdit from './OrderEdit';
+import Layout from './layouts/Layout';
 function App() {
   
 
   return (
     <>
-      <h1>Courier Network System</h1>
       <Router>
         <Routes>
-          <Route path="/" element={<Navigate to="/orders"/>}></Route>
-          <Route path="/orders" element={<OrdersList/>}></Route>
-          <Route path="/orders/:id" element={<OrderDetails/>}></Route>
-          <Route path="/orders/new" element={<OrderNew/>}></Route>
-          <Route path="/orders/:id/edit" element={<OrderEdit/>}></Route>
+          <Route element={<Layout/>}>
+            <Route path="/" element={<Navigate to="/orders"/>}></Route>
+            <Route path="/orders" element={<OrdersList/>}></Route>
+            <Route path="/orders/:id" element={<OrderDetails/>}></Route>
+            <Route path="/orders/new" element={<OrderNew/>}></Route>
+            <Route path="/orders/:id/edit" element={<OrderEdit/>}></Route>
+          </Route>
         </Routes>
       </Router>
     </>
