@@ -14,7 +14,7 @@ export default function OrdersList() {
   return (
     <div>
       <h2>All Orders</h2>
-      <Link to="/orders/new"><button>Create New</button></Link>
+      {/* <Link to="/orders/new"><button>Create New</button></Link> */}
       <ul>
         {orders.map((order) => (
           <li key={order._id}>
