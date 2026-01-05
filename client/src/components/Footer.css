@@ -1,0 +1,24 @@
+.f-info-links a {
+    text-decoration: none;
+    color: #222222;
+}
+.f-info-links a:hover {
+    text-decoration: underline;
+
+}
+.f-info-links {
+    width: 100%;
+}
+.f-info-socials {
+    width: 100%;
+    font-size: 1.5rem;
+}
+.f-info {
+    display: flex;
+    text-align: center;
+    height: 8rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    background-color: #ebebeb;
+}
