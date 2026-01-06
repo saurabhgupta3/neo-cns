@@ -67,17 +67,6 @@ app.delete("/orders/:id", async (req, res) => {
     res.json(deletedOrder);
 })
 
-// app.get("/testing", async (req, res) => {
-//     let newOrder = new Order({
-//         senderName: "Saurabh",
-//         receiverName: "Plk",
-//         pickupAddress: "pratapgarh",
-//         deliveryAddress: "prayagraj",
-//     });
-//     await newOrder.save();
-//     console.log("order saved");
-//     res.send("successful");
-// })
 
 app.listen(process.env.PORT, () => {
     console.log(`server is listening to port ${process.env.PORT}`);

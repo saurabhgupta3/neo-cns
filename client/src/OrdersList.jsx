@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import {Link} from 'react-router-dom';
+import "./OrdersList.css";
 
 export default function OrdersList() {
   const [orders, setOrders] = useState([]);
@@ -12,16 +13,28 @@ export default function OrdersList() {
   }, []);
 
   return (
-    <div>
+    <div className="content">
       <h2>All Orders</h2>
-      {/* <Link to="/orders/new"><button>Create New</button></Link> */}
-      <ul>
-        {orders.map((order) => (
-          <li key={order._id}>
-            <Link to={`/orders/${order._id}`}>{order.senderName} - {order.receiverName} ({order.status})</Link>
-          </li>
+      <div className="row row-cols-lg-3 row-cols-md-2 row-cols-sm-1">
+        {orders.map((order) => (    
+          <Link to={`/orders/${order._id}`} key={order._id} className="order-show-link">
+            <div className="card col">
+              <img src={order.image} alt="order image" className="card-img-top" style={{ height: "20rem" }} onError={(e) => {
+                    e.target.onerror = null; 
+                    e.target.src = "https://res.cloudinary.com/dfq3xkwrk/image/upload/v1762187021/ChatGPT_Image_Nov_3_2025_09_51_44_PM_ausbho.png"; 
+              }}/>
+              <div className="card-img-overlay"></div>
+              <div className="card-body">
+                <p className="card-text">
+                  <b>{order.senderName} - {order.receiverName}</b>
+                  <br />
+                  &#8377;{order.price.toLocaleString("en-IN")}
+                </p>
+              </div>
+            </div>
+          </Link> 
         ))}
-      </ul>
+      </div>
     </div>
   );
 }
