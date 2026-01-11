@@ -26,7 +26,7 @@ export default function OrdersList() {
               <div className="card-img-overlay"></div>
               <div className="card-body">
                 <p className="card-text">
-                  <b>{order.senderName} - {order.receiverName}</b>
+                  <b>{order.senderName} <span className="text-muted">→</span> {order.receiverName}</b>
                   <br />
                   &#8377;{order.price.toLocaleString("en-IN")}
                 </p>
