@@ -1,1 +1,1 @@
-Welcome to Neo-CNS (Frontend)
+# Welcome to Neo-CNS (Frontend (client side))
