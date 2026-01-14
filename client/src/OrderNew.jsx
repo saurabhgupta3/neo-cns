@@ -43,6 +43,11 @@ export default function OrderNew() {
       });
 
       const data = await res.json();
+      if(!res.ok) {
+        console.error(data.error);
+        alert("something went wrong!");
+        return;
+      }
       console.log("Order created:", data);
       navigate("/orders");
     } catch (err) {
@@ -139,7 +144,7 @@ export default function OrderNew() {
         
           <div className="mb-3">
             <label htmlFor="image" className="form-label">
-              Image Link
+              Image Link (Optional)
             </label>
             <input
               type="url"
@@ -156,7 +161,7 @@ export default function OrderNew() {
               Weight (kg)
             </label>
             <input
-              type="number"
+            //   type="number"
               id="weight"
               name="weight"
               className="form-control"

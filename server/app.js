@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const Order = require("./models/order.js");
 const cors = require("cors");
 const {calculateDistance, calculatePrice} = require("./utils/orderUtils.js");
+const wrapAsync = require("./utils/wrapAsync.js");
 require("dotenv").config();
 
 const app = express();
@@ -40,7 +41,8 @@ app.get("/orders/:id", async (req, res) => {
 
 });
 
-app.post("/orders", async (req, res) => {
+//create order
+app.post("/orders", wrapAsync(async (req, res, next) => {
     const orderData = req.body;
     orderData.distance = calculateDistance(orderData.pickupAddress, orderData.deliveryAddress);
     orderData.price = calculatePrice(orderData.weight, orderData.distance);
@@ -48,7 +50,7 @@ app.post("/orders", async (req, res) => {
     await newOrder.save();
     console.log("order is saved");
     res.json(newOrder);
-});
+}));
 
 app.put("/orders/:id", async (req, res) => {
     let {id} = req.params;
@@ -65,6 +67,13 @@ app.delete("/orders/:id", async (req, res) => {
     const deletedOrder = await Order.findByIdAndDelete(id);
     console.log(deletedOrder);
     res.json(deletedOrder);
+})
+
+app.use((err, req, res, next) => {
+    console.error(err.message);
+    res.status(500).json({
+        error: err.message || "Something went wrong"
+    });
 })
 
 
