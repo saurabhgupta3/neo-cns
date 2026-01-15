@@ -6,6 +6,7 @@ import OrderDetails from './OrderDetails';
 import OrderNew from './OrderNew';
 import OrderEdit from './OrderEdit';
 import Layout from './layouts/Layout';
+import NotFound from './NotFound';
 function App() {
   
 
@@ -19,6 +20,7 @@ function App() {
             <Route path="/orders/:id" element={<OrderDetails/>}></Route>
             <Route path="/orders/new" element={<OrderNew/>}></Route>
             <Route path="/orders/:id/edit" element={<OrderEdit/>}></Route>
+             <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>
       </Router>

@@ -4,6 +4,7 @@ const Order = require("./models/order.js");
 const cors = require("cors");
 const {calculateDistance, calculatePrice} = require("./utils/orderUtils.js");
 const wrapAsync = require("./utils/wrapAsync.js");
+const ExpressError = require("./utils/expressError.js");
 require("dotenv").config();
 
 const app = express();
@@ -28,18 +29,18 @@ app.get("/", (req, res) => {
     res.send("root route");
 });
 
-app.get("/orders", async (req, res) => {
+app.get("/orders", wrapAsync(async (req, res) => {
     const allOrders = await Order.find({});
     console.log("success");
     res.json(allOrders);
-});
+}));
 
-app.get("/orders/:id", async (req, res) => {
+app.get("/orders/:id", wrapAsync(async (req, res) => {
     let {id} = req.params;
     const order = await Order.findById(id);
     res.json(order);
 
-});
+}));
 
 //create order
 app.post("/orders", wrapAsync(async (req, res, next) => {
@@ -52,7 +53,7 @@ app.post("/orders", wrapAsync(async (req, res, next) => {
     res.json(newOrder);
 }));
 
-app.put("/orders/:id", async (req, res) => {
+app.put("/orders/:id", wrapAsync(async (req, res) => {
     let {id} = req.params;
     const orderData = req.body;
     orderData.distance = calculateDistance(orderData.pickupAddress, orderData.deliveryAddress);
@@ -60,19 +61,24 @@ app.put("/orders/:id", async (req, res) => {
     const updatedOrder = await Order.findByIdAndUpdate(id, {...orderData}, {new: true});
     console.log("order is edited");
     res.json(updatedOrder);
-});
+}));
 
-app.delete("/orders/:id", async (req, res) => {
+app.delete("/orders/:id", wrapAsync(async (req, res) => {
     let {id} = req.params;
     const deletedOrder = await Order.findByIdAndDelete(id);
     console.log(deletedOrder);
     res.json(deletedOrder);
+}));
+
+app.use((req, res, next) => {
+    next(new ExpressError(404, "Page Not Found"));
 })
 
 app.use((err, req, res, next) => {
-    console.error(err.message);
-    res.status(500).json({
-        error: err.message || "Something went wrong"
+    let {statusCode=500, message="something went wrong"} = err;
+    console.error(message);
+    res.status(statusCode).json({
+        message
     });
 })
 

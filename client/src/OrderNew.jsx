@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 import "./OrderNew.css";
 
 export default function OrderNew() {
@@ -43,12 +44,13 @@ export default function OrderNew() {
       });
 
       const data = await res.json();
-      if(!res.ok) {
-        console.error(data.error);
-        alert("something went wrong!");
+      if (!res.ok) {
+        toast.error(data.message || "Failed to create order");
         return;
       }
+
       console.log("Order created:", data);
+      toast.success("Order created successfully!");
       navigate("/orders");
     } catch (err) {
       console.error("Error creating order:", err);
