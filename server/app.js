@@ -1,88 +1,106 @@
 const express = require("express");
 const mongoose = require("mongoose");
-const Order = require("./models/order.js");
 const cors = require("cors");
-const {calculateDistance, calculatePrice} = require("./utils/orderUtils.js");
-const wrapAsync = require("./utils/wrapAsync.js");
-const ExpressError = require("./utils/expressError.js");
 require("dotenv").config();
+
+// Import routes
+const authRoutes = require("./routes/authRoutes");
+const orderRoutes = require("./routes/orderRoutes");
+const userRoutes = require("./routes/userRoutes");
+
+// Import error handler
+const ExpressError = require("./utils/expressError");
 
 const app = express();
 
+// Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.urlencoded({extended: true}));
+app.use(express.urlencoded({ extended: true }));
 
+// Database connection
 main()
     .then(() => {
-        console.log("connected to DB");
+        console.log("✅ Connected to MongoDB");
     })
     .catch((err) => {
-        console.log(err);
+        console.error("❌ MongoDB connection error:", err);
     });
 
 async function main() {
     await mongoose.connect(process.env.MONGO_URL);
 }
 
+// Health check route
 app.get("/", (req, res) => {
-    res.send("root route");
+    res.json({ 
+        success: true,
+        message: "🚀 Neo-CNS API is running!",
+        version: "1.0.0",
+        endpoints: {
+            auth: "/api/auth",
+            orders: "/api/orders",
+            users: "/api/users"
+        }
+    });
 });
 
-app.get("/orders", wrapAsync(async (req, res) => {
-    const allOrders = await Order.find({});
-    console.log("success");
-    res.json(allOrders);
-}));
+app.get("/health", (req, res) => {
+    res.json({ status: "healthy", timestamp: new Date().toISOString() });
+});
 
-app.get("/orders/:id", wrapAsync(async (req, res) => {
-    let {id} = req.params;
-    const order = await Order.findById(id);
-    res.json(order);
+// API Routes
+app.use("/api/auth", authRoutes);
+app.use("/api/orders", orderRoutes);
+app.use("/api/users", userRoutes);
 
-}));
-
-//create order
-app.post("/orders", wrapAsync(async (req, res, next) => {
-    const orderData = req.body;
-    orderData.distance = calculateDistance(orderData.pickupAddress, orderData.deliveryAddress);
-    orderData.price = calculatePrice(orderData.weight, orderData.distance);
-    const newOrder = new Order(orderData);
-    await newOrder.save();
-    console.log("order is saved");
-    res.json(newOrder);
-}));
-
-app.put("/orders/:id", wrapAsync(async (req, res) => {
-    let {id} = req.params;
-    const orderData = req.body;
-    orderData.distance = calculateDistance(orderData.pickupAddress, orderData.deliveryAddress);
-    orderData.price = calculatePrice(orderData.weight, orderData.distance);
-    const updatedOrder = await Order.findByIdAndUpdate(id, {...orderData}, {new: true});
-    console.log("order is edited");
-    res.json(updatedOrder);
-}));
-
-app.delete("/orders/:id", wrapAsync(async (req, res) => {
-    let {id} = req.params;
-    const deletedOrder = await Order.findByIdAndDelete(id);
-    console.log(deletedOrder);
-    res.json(deletedOrder);
-}));
-
+// 404 handler
 app.use((req, res, next) => {
-    next(new ExpressError(404, "Page Not Found"));
-})
+    next(new ExpressError(404, `Route ${req.originalUrl} not found`));
+});
 
+// Global error handler
 app.use((err, req, res, next) => {
-    let {statusCode=500, message="something went wrong"} = err;
-    console.error(message);
+    let { statusCode = 500, message = "Something went wrong" } = err;
+    
+    // Log error for debugging
+    console.error(`❌ Error: ${message}`);
+    if (process.env.NODE_ENV === "development") {
+        console.error(err.stack);
+    }
+    
+    // Mongoose validation error
+    if (err.name === "ValidationError") {
+        statusCode = 400;
+        message = Object.values(err.errors).map(e => e.message).join(", ");
+    }
+    
+    // Mongoose duplicate key error
+    if (err.code === 11000) {
+        statusCode = 400;
+        const field = Object.keys(err.keyValue)[0];
+        message = `${field} already exists`;
+    }
+    
+    // Mongoose cast error (invalid ObjectId)
+    if (err.name === "CastError") {
+        statusCode = 400;
+        message = "Invalid ID format";
+    }
+    
     res.status(statusCode).json({
-        message
+        success: false,
+        message,
+        ...(process.env.NODE_ENV === "development" && { stack: err.stack })
     });
-})
+});
 
-
-app.listen(process.env.PORT, () => {
-    console.log(`server is listening to port ${process.env.PORT}`);
+// Start server
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, () => {
+    console.log(`🚀 Server is running on port ${PORT}`);
+    console.log(`📍 API endpoints:`);
+    console.log(`   - Auth:   http://localhost:${PORT}/api/auth`);
+    console.log(`   - Orders: http://localhost:${PORT}/api/orders`);
+    console.log(`   - Users:  http://localhost:${PORT}/api/users`);
 });
