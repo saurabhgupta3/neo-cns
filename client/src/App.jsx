@@ -1,31 +1,85 @@
-import {BrowserRouter as Router, Routes, Route} from 'react-router-dom';
-import { Navigate } from 'react-router-dom';
-import './App.css'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import './App.css';
+
+// Context
+import { AuthProvider } from './context/AuthContext';
+
+// Components
+import { ProtectedRoute, PublicRoute } from './components/ProtectedRoute';
+import Layout from './layouts/Layout';
+
+// Pages
+import Login from './pages/Login';
+import Register from './pages/Register';
+import Unauthorized from './pages/Unauthorized';
 import OrdersList from "./OrdersList";
 import OrderDetails from './OrderDetails';
 import OrderNew from './OrderNew';
 import OrderEdit from './OrderEdit';
-import Layout from './layouts/Layout';
 import NotFound from './NotFound';
-function App() {
-  
 
+function App() {
   return (
-    <>
+    <AuthProvider>
       <Router>
+        <ToastContainer
+          position="top-right"
+          autoClose={3000}
+          hideProgressBar={false}
+          newestOnTop
+          closeOnClick
+          pauseOnHover
+        />
         <Routes>
-          <Route element={<Layout/>}>
-            <Route path="/" element={<Navigate to="/orders"/>}></Route>
-            <Route path="/orders" element={<OrdersList/>}></Route>
-            <Route path="/orders/:id" element={<OrderDetails/>}></Route>
-            <Route path="/orders/new" element={<OrderNew/>}></Route>
-            <Route path="/orders/:id/edit" element={<OrderEdit/>}></Route>
-             <Route path="*" element={<NotFound />} />
+          {/* Public Routes (redirect if logged in) */}
+          <Route path="/login" element={
+            <PublicRoute>
+              <Login />
+            </PublicRoute>
+          } />
+          <Route path="/register" element={
+            <PublicRoute>
+              <Register />
+            </PublicRoute>
+          } />
+
+          {/* Protected Routes (require login) */}
+          <Route element={<Layout />}>
+            <Route path="/" element={<Navigate to="/orders" />} />
+
+            <Route path="/orders" element={
+              <ProtectedRoute>
+                <OrdersList />
+              </ProtectedRoute>
+            } />
+
+            <Route path="/orders/new" element={
+              <ProtectedRoute>
+                <OrderNew />
+              </ProtectedRoute>
+            } />
+
+            <Route path="/orders/:id" element={
+              <ProtectedRoute>
+                <OrderDetails />
+              </ProtectedRoute>
+            } />
+
+            <Route path="/orders/:id/edit" element={
+              <ProtectedRoute>
+                <OrderEdit />
+              </ProtectedRoute>
+            } />
+
+            <Route path="/unauthorized" element={<Unauthorized />} />
+            <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>
       </Router>
-    </>
-  )
+    </AuthProvider>
+  );
 }
 
-export default App
+export default App;
