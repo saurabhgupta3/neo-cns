@@ -1,1 +1,1 @@
-# Welcome to Neo-CNS | Frontend | Made With React.js
+# Welcome to Neo-CNS | Frontend
