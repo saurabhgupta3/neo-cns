@@ -1,0 +1,333 @@
+/* Admin Dashboard Styles */
+
+.admin-container {
+    padding: 1.5rem;
+    background-color: #f8f9fa;
+    min-height: calc(100vh - 5rem);
+}
+
+/* Stats Cards */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: white;
+}
+
+.stat-icon.users { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+.stat-icon.orders { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
+.stat-icon.couriers { background: linear-gradient(135deg, #fc4a1a 0%, #f7b733 100%); }
+.stat-icon.pending { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+
+.stat-info h3 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin: 0;
+    color: #333;
+}
+
+.stat-info p {
+    margin: 0;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+/* Admin Cards */
+.admin-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+}
+
+.admin-card-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.admin-card-header h5 {
+    margin: 0;
+    font-weight: 600;
+}
+
+.admin-card-body {
+    padding: 1.5rem;
+}
+
+/* Tables */
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.admin-table th {
+    background-color: #f8f9fa;
+    padding: 0.75rem 1rem;
+    text-align: left;
+    font-weight: 600;
+    color: #333;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.admin-table td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #eee;
+    vertical-align: middle;
+}
+
+.admin-table tr:hover {
+    background-color: #f8f9fa;
+}
+
+/* Role badges */
+.role-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.role-badge.admin { background: #e8e0ff; color: #5b21b6; }
+.role-badge.courier { background: #fef3c7; color: #d97706; }
+.role-badge.user { background: #d1fae5; color: #047857; }
+
+/* Status badges */
+.status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.status-badge.pending { background: #fef3c7; color: #d97706; }
+.status-badge.confirmed { background: #dbeafe; color: #1d4ed8; }
+.status-badge.picked-up { background: #e0e7ff; color: #4338ca; }
+.status-badge.in-transit { background: #dbeafe; color: #1d4ed8; }
+.status-badge.delivered { background: #d1fae5; color: #047857; }
+.status-badge.cancelled { background: #fee2e2; color: #dc2626; }
+
+/* Action buttons */
+.action-btn {
+    padding: 0.35rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-right: 0.25rem;
+}
+
+.action-btn.edit {
+    background: #e0e7ff;
+    color: #4338ca;
+}
+
+.action-btn.edit:hover {
+    background: #c7d2fe;
+}
+
+.action-btn.delete {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.action-btn.delete:hover {
+    background: #fecaca;
+}
+
+.action-btn.assign {
+    background: #d1fae5;
+    color: #047857;
+}
+
+.action-btn.assign:hover {
+    background: #a7f3d0;
+}
+
+/* Tabs */
+.admin-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 0.5rem;
+}
+
+.admin-tab {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-weight: 500;
+    color: #666;
+    border-radius: 8px 8px 0 0;
+    transition: all 0.2s ease;
+}
+
+.admin-tab:hover {
+    background: #f0f0f0;
+}
+
+.admin-tab.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+/* Search bar */
+.admin-search {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.admin-search input {
+    flex: 1;
+    padding: 0.6rem 1rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    transition: border-color 0.2s ease;
+}
+
+.admin-search input:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.admin-search select {
+    padding: 0.6rem 1rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    background: white;
+}
+
+/* Modal */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    width: 100%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #eee;
+}
+
+.modal-header h4 {
+    margin: 0;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #666;
+}
+
+.modal-close:hover {
+    color: #333;
+}
+
+/* Quick Actions */
+.quick-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.quick-action-btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s ease;
+}
+
+.quick-action-btn.primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.quick-action-btn.primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.quick-action-btn.secondary {
+    background: #f0f0f0;
+    color: #333;
+}
+
+.quick-action-btn.secondary:hover {
+    background: #e0e0e0;
+}

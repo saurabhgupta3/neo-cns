@@ -20,6 +20,11 @@ import OrderNew from './OrderNew';
 import OrderEdit from './OrderEdit';
 import NotFound from './NotFound';
 
+// Admin Pages
+import AdminDashboard from './pages/admin/AdminDashboard';
+import UserManagement from './pages/admin/UserManagement';
+import OrderManagement from './pages/admin/OrderManagement';
+
 function App() {
   return (
     <AuthProvider>
@@ -70,6 +75,25 @@ function App() {
             <Route path="/orders/:id/edit" element={
               <ProtectedRoute>
                 <OrderEdit />
+              </ProtectedRoute>
+            } />
+
+            {/* Admin Routes - Only accessible by admins */}
+            <Route path="/admin" element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <AdminDashboard />
+              </ProtectedRoute>
+            } />
+
+            <Route path="/admin/users" element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <UserManagement />
+              </ProtectedRoute>
+            } />
+
+            <Route path="/admin/orders" element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <OrderManagement />
               </ProtectedRoute>
             } />
 
