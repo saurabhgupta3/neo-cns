@@ -50,8 +50,8 @@ router.get("/:id", authenticate, wrapAsync(async (req, res) => {
     res.json({ success: true, order });
 }));
 
-// POST /api/orders - Create new order
-router.post("/", authenticate, wrapAsync(async (req, res) => {
+// POST /api/orders - Create new order (Users and Admins only - Couriers cannot create orders)
+router.post("/", authenticate, authorize("user", "admin"), wrapAsync(async (req, res) => {
     const orderData = req.body;
     
     // Calculate distance and price

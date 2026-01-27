@@ -7,7 +7,7 @@ export default function OrdersList() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const { authFetch } = useAuth();
+  const { authFetch, user } = useAuth();
 
   useEffect(() => {
     fetchOrders();
@@ -56,18 +56,26 @@ export default function OrdersList() {
   return (
     <div className="content">
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2>All Orders</h2>
-        <Link to="/orders/new" className="btn btn-primary">
-          + New Order
-        </Link>
+        <h2>{user?.role === "courier" ? "My Assigned Orders" : "All Orders"}</h2>
+        {user?.role !== "courier" && (
+          <Link to="/orders/new" className="btn btn-primary">
+            + New Order
+          </Link>
+        )}
       </div>
 
       {orders.length === 0 ? (
         <div className="text-center py-5">
-          <p className="text-muted">No orders found. Create your first order!</p>
-          <Link to="/orders/new" className="btn btn-primary">
-            Create Order
-          </Link>
+          <p className="text-muted">
+            {user?.role === "courier"
+              ? "No orders assigned to you yet."
+              : "No orders found. Create your first order!"}
+          </p>
+          {user?.role !== "courier" && (
+            <Link to="/orders/new" className="btn btn-primary">
+              Create Order
+            </Link>
+          )}
         </div>
       ) : (
         <div className="row row-cols-lg-3 row-cols-md-2 row-cols-sm-1 g-4">

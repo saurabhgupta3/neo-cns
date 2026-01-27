@@ -30,7 +30,9 @@ export default function Navbar() {
                         {isAuthenticated && (
                             <>
                                 <Link className="nav-link" to="/orders">All Orders</Link>
-                                <Link className="nav-link" to="/orders/new">Add New Order</Link>
+                                {user?.role !== "courier" && (
+                                    <Link className="nav-link" to="/orders/new">Add New Order</Link>
+                                )}
                                 {user?.role === "admin" && (
                                     <>
                                         <div className="nav-item dropdown">
@@ -72,7 +74,7 @@ export default function Navbar() {
                                     <FontAwesomeIcon icon={faUser} className="me-1" />
                                     {user?.name}
                                     <span className={`badge ms-1 ${user?.role === 'admin' ? 'bg-danger' :
-                                            user?.role === 'courier' ? 'bg-warning text-dark' : 'bg-secondary'
+                                        user?.role === 'courier' ? 'bg-warning text-dark' : 'bg-secondary'
                                         }`}>{user?.role}</span>
                                 </span>
                                 <button className="nav-link btn btn-link" onClick={handleLogout}>
