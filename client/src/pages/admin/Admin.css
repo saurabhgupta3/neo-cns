@@ -488,3 +488,13 @@
     }
 }
 
+/* Deleted row styling */
+.deleted-row {
+    background-color: #fef2f2 !important;
+    opacity: 0.8;
+}
+
+.deleted-row:hover {
+    background-color: #fee2e2 !important;
+}
+

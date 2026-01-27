@@ -244,4 +244,28 @@ router.get("/stats/summary", wrapAsync(async (req, res) => {
     });
 }));
 
+// PUT /api/users/:id/restore - Restore a soft-deleted user
+router.put("/:id/restore", wrapAsync(async (req, res) => {
+    const user = await User.findById(req.params.id);
+    
+    if (!user) {
+        return res.status(404).json({ success: false, message: "User not found" });
+    }
+    
+    if (!user.deletedAt) {
+        return res.status(400).json({ success: false, message: "User is not deleted" });
+    }
+    
+    // Restore the user
+    user.isActive = true;
+    user.deletedAt = null;
+    await user.save();
+    
+    res.json({
+        success: true,
+        message: `User "${user.name}" has been restored successfully.`,
+        user
+    });
+}));
+
 module.exports = router;

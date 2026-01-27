@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { toast } from "react-toastify";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEdit, faTrash, faUserShield, faSearch } from "@fortawesome/free-solid-svg-icons";
+import { faEdit, faTrash, faUserShield, faSearch, faUndo, faUsers, faUserCheck, faUserTimes, faUserSlash } from "@fortawesome/free-solid-svg-icons";
 import "./Admin.css";
 
 export default function UserManagement() {
@@ -11,16 +11,20 @@ export default function UserManagement() {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
     const [roleFilter, setRoleFilter] = useState("");
+    const [statusFilter, setStatusFilter] = useState("active"); // "all", "active", "inactive", "deleted"
     const [editModal, setEditModal] = useState({ show: false, user: null });
     const [editForm, setEditForm] = useState({});
 
     useEffect(() => {
         fetchUsers();
-    }, []);
+    }, [statusFilter]);
 
     const fetchUsers = async () => {
         try {
-            const res = await authFetch("/users");
+            setLoading(true);
+            // Include deleted users when viewing deleted tab
+            const includeDeleted = statusFilter === "deleted" || statusFilter === "all";
+            const res = await authFetch(`/users${includeDeleted ? "?includeDeleted=true" : ""}`);
             const data = await res.json();
             if (res.ok) {
                 setUsers(data.users || []);
@@ -42,13 +46,32 @@ export default function UserManagement() {
             const res = await authFetch(`/users/${userId}`, { method: "DELETE" });
             if (res.ok) {
                 toast.success("User deleted successfully");
-                setUsers(users.filter(u => u._id !== userId));
+                fetchUsers(); // Refresh to update counts
             } else {
                 const data = await res.json();
                 toast.error(data.message || "Failed to delete user");
             }
         } catch (error) {
             toast.error("Error deleting user");
+        }
+    };
+
+    const handleRestore = async (userId, userName) => {
+        if (!window.confirm(`Are you sure you want to restore "${userName}"?`)) {
+            return;
+        }
+
+        try {
+            const res = await authFetch(`/users/${userId}/restore`, { method: "PUT" });
+            const data = await res.json();
+            if (res.ok) {
+                toast.success(data.message);
+                fetchUsers(); // Refresh list
+            } else {
+                toast.error(data.message || "Failed to restore user");
+            }
+        } catch (error) {
+            toast.error("Error restoring user");
         }
     };
 
@@ -122,13 +145,32 @@ export default function UserManagement() {
         }
     };
 
-    // Filter users
+    // Filter users based on status and search
     const filteredUsers = users.filter(user => {
         const matchesSearch = user.name.toLowerCase().includes(search.toLowerCase()) ||
             user.email.toLowerCase().includes(search.toLowerCase());
         const matchesRole = !roleFilter || user.role === roleFilter;
-        return matchesSearch && matchesRole;
+
+        // Status filter
+        let matchesStatus = true;
+        if (statusFilter === "active") {
+            matchesStatus = user.isActive && !user.deletedAt;
+        } else if (statusFilter === "inactive") {
+            matchesStatus = !user.isActive && !user.deletedAt;
+        } else if (statusFilter === "deleted") {
+            matchesStatus = user.deletedAt !== null;
+        }
+
+        return matchesSearch && matchesRole && matchesStatus;
     });
+
+    // Count stats
+    const stats = {
+        all: users.length,
+        active: users.filter(u => u.isActive && !u.deletedAt).length,
+        inactive: users.filter(u => !u.isActive && !u.deletedAt).length,
+        deleted: users.filter(u => u.deletedAt).length
+    };
 
     if (loading) {
         return (
@@ -146,6 +188,38 @@ export default function UserManagement() {
                 <FontAwesomeIcon icon={faUserShield} className="me-2" />
                 User Management
             </h2>
+
+            {/* Status Filter Tabs */}
+            <div className="filter-tabs mb-4">
+                <button
+                    className={`filter-tab ${statusFilter === "all" ? "active" : ""}`}
+                    onClick={() => setStatusFilter("all")}
+                >
+                    <FontAwesomeIcon icon={faUsers} className="me-2" />
+                    All ({stats.all})
+                </button>
+                <button
+                    className={`filter-tab ${statusFilter === "active" ? "active" : ""}`}
+                    onClick={() => setStatusFilter("active")}
+                >
+                    <FontAwesomeIcon icon={faUserCheck} className="me-2" />
+                    Active ({stats.active})
+                </button>
+                <button
+                    className={`filter-tab ${statusFilter === "inactive" ? "active" : ""}`}
+                    onClick={() => setStatusFilter("inactive")}
+                >
+                    <FontAwesomeIcon icon={faUserTimes} className="me-2" />
+                    Inactive ({stats.inactive})
+                </button>
+                <button
+                    className={`filter-tab ${statusFilter === "deleted" ? "active" : ""}`}
+                    onClick={() => setStatusFilter("deleted")}
+                >
+                    <FontAwesomeIcon icon={faUserSlash} className="me-2" />
+                    Deleted ({stats.deleted})
+                </button>
+            </div>
 
             {/* Search and Filter */}
             <div className="admin-search">
@@ -178,55 +252,81 @@ export default function UserManagement() {
                                 <th>Phone</th>
                                 <th>Role</th>
                                 <th>Status</th>
+                                {statusFilter === "deleted" && <th>Deleted On</th>}
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {filteredUsers.length === 0 ? (
                                 <tr>
-                                    <td colSpan="6" className="text-center text-muted py-4">
+                                    <td colSpan={statusFilter === "deleted" ? 7 : 6} className="text-center text-muted py-4">
                                         No users found
                                     </td>
                                 </tr>
                             ) : (
                                 filteredUsers.map(user => (
-                                    <tr key={user._id}>
+                                    <tr key={user._id} className={user.deletedAt ? "deleted-row" : ""}>
                                         <td>{user.name}</td>
                                         <td>{user.email}</td>
                                         <td>{user.phone || "-"}</td>
                                         <td>
-                                            <select
-                                                className={`role-badge ${user.role}`}
-                                                value={user.role}
-                                                onChange={(e) => handleRoleChange(user._id, e.target.value)}
-                                                style={{ border: 'none', cursor: 'pointer' }}
-                                            >
-                                                <option value="user">User</option>
-                                                <option value="courier">Courier</option>
-                                                <option value="admin">Admin</option>
-                                            </select>
+                                            {user.deletedAt ? (
+                                                <span className={`role-badge ${user.role}`}>{user.role}</span>
+                                            ) : (
+                                                <select
+                                                    className={`role-badge ${user.role}`}
+                                                    value={user.role}
+                                                    onChange={(e) => handleRoleChange(user._id, e.target.value)}
+                                                    style={{ border: 'none', cursor: 'pointer' }}
+                                                >
+                                                    <option value="user">User</option>
+                                                    <option value="courier">Courier</option>
+                                                    <option value="admin">Admin</option>
+                                                </select>
+                                            )}
                                         </td>
                                         <td>
-                                            <button
-                                                className={`action-btn ${user.isActive ? 'assign' : 'delete'}`}
-                                                onClick={() => handleToggleActive(user._id)}
-                                            >
-                                                {user.isActive ? "Active" : "Inactive"}
-                                            </button>
+                                            {user.deletedAt ? (
+                                                <span className="status-badge cancelled">Deleted</span>
+                                            ) : (
+                                                <button
+                                                    className={`action-btn ${user.isActive ? 'assign' : 'delete'}`}
+                                                    onClick={() => handleToggleActive(user._id)}
+                                                >
+                                                    {user.isActive ? "Active" : "Inactive"}
+                                                </button>
+                                            )}
                                         </td>
+                                        {statusFilter === "deleted" && (
+                                            <td>
+                                                {user.deletedAt ? new Date(user.deletedAt).toLocaleDateString() : "-"}
+                                            </td>
+                                        )}
                                         <td>
-                                            <button
-                                                className="action-btn edit"
-                                                onClick={() => handleEditClick(user)}
-                                            >
-                                                <FontAwesomeIcon icon={faEdit} />
-                                            </button>
-                                            <button
-                                                className="action-btn delete"
-                                                onClick={() => handleDelete(user._id, user.name)}
-                                            >
-                                                <FontAwesomeIcon icon={faTrash} />
-                                            </button>
+                                            {user.deletedAt ? (
+                                                <button
+                                                    className="action-btn assign"
+                                                    onClick={() => handleRestore(user._id, user.name)}
+                                                    title="Restore user"
+                                                >
+                                                    <FontAwesomeIcon icon={faUndo} /> Restore
+                                                </button>
+                                            ) : (
+                                                <>
+                                                    <button
+                                                        className="action-btn edit"
+                                                        onClick={() => handleEditClick(user)}
+                                                    >
+                                                        <FontAwesomeIcon icon={faEdit} />
+                                                    </button>
+                                                    <button
+                                                        className="action-btn delete"
+                                                        onClick={() => handleDelete(user._id, user.name)}
+                                                    >
+                                                        <FontAwesomeIcon icon={faTrash} />
+                                                    </button>
+                                                </>
+                                            )}
                                         </td>
                                     </tr>
                                 ))
