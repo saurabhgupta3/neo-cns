@@ -1,15 +1,20 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { toast } from "react-toastify";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faEdit, faLock, faSave, faTimes } from "@fortawesome/free-solid-svg-icons";
+import { faUser, faEdit, faLock, faSave, faTimes, faTrash, faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
 import "./Profile.css";
 
 export default function Profile() {
-    const { user, authFetch } = useAuth();
+    const { user, authFetch, logout } = useAuth();
+    const navigate = useNavigate();
     const [isEditing, setIsEditing] = useState(false);
     const [showPasswordForm, setShowPasswordForm] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [deletePassword, setDeletePassword] = useState("");
     const [loading, setLoading] = useState(false);
+    const [deleteLoading, setDeleteLoading] = useState(false);
 
     const [profileData, setProfileData] = useState({
         name: "",
@@ -369,6 +374,110 @@ export default function Profile() {
                     day: 'numeric'
                 })}
             </div>
+
+            {/* Delete Account Card */}
+            <div className="profile-card danger-card">
+                <div className="profile-card-header danger-header">
+                    <h5>
+                        <FontAwesomeIcon icon={faTrash} className="me-2" />
+                        Danger Zone
+                    </h5>
+                </div>
+                <div className="profile-card-body">
+                    <div className="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 className="mb-1">Delete Account</h6>
+                            <p className="text-muted mb-0 small">
+                                Once you delete your account, there is no going back. Please be certain.
+                            </p>
+                        </div>
+                        <button
+                            className="btn btn-outline-danger"
+                            onClick={() => setShowDeleteModal(true)}
+                        >
+                            Delete Account
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Delete Confirmation Modal */}
+            {showDeleteModal && (
+                <div className="modal-overlay" onClick={() => setShowDeleteModal(false)}>
+                    <div className="delete-modal" onClick={e => e.stopPropagation()}>
+                        <div className="delete-modal-header">
+                            <FontAwesomeIcon icon={faExclamationTriangle} className="warning-icon" />
+                            <h4>Delete Account</h4>
+                        </div>
+                        <div className="delete-modal-body">
+                            <p>Are you sure you want to delete your account? This action:</p>
+                            <ul>
+                                <li>Cannot be undone</li>
+                                <li>Will remove your profile data</li>
+                                <li>Will log you out immediately</li>
+                            </ul>
+                            <p className="text-muted small">
+                                <strong>Note:</strong> If you have active orders, you must wait until they are delivered or cancel them first.
+                            </p>
+                            <form onSubmit={async (e) => {
+                                e.preventDefault();
+                                setDeleteLoading(true);
+
+                                try {
+                                    const res = await authFetch("/auth/delete-account", {
+                                        method: "DELETE",
+                                        body: { password: deletePassword }
+                                    });
+                                    const data = await res.json();
+
+                                    if (res.ok) {
+                                        toast.success(data.message);
+                                        logout();
+                                        navigate("/login");
+                                    } else {
+                                        toast.error(data.message || "Failed to delete account");
+                                    }
+                                } catch (error) {
+                                    toast.error(error.message);
+                                } finally {
+                                    setDeleteLoading(false);
+                                }
+                            }}>
+                                <div className="mb-3">
+                                    <label className="form-label">Enter your password to confirm:</label>
+                                    <input
+                                        type="password"
+                                        className="form-control"
+                                        value={deletePassword}
+                                        onChange={(e) => setDeletePassword(e.target.value)}
+                                        placeholder="Your password"
+                                        required
+                                    />
+                                </div>
+                                <div className="d-flex gap-2 justify-content-end">
+                                    <button
+                                        type="button"
+                                        className="btn btn-secondary"
+                                        onClick={() => {
+                                            setShowDeleteModal(false);
+                                            setDeletePassword("");
+                                        }}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        className="btn btn-danger"
+                                        disabled={deleteLoading || !deletePassword}
+                                    >
+                                        {deleteLoading ? "Deleting..." : "Delete My Account"}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

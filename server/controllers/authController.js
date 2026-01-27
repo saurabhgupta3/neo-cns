@@ -209,10 +209,95 @@ const changePassword = async (req, res, next) => {
     }
 };
 
+// @desc    Delete own account (self-delete request)
+// @route   DELETE /api/auth/delete-account
+// @access  Private
+const deleteAccount = async (req, res, next) => {
+    try {
+        const { password } = req.body;
+        const Order = require("../models/order");
+
+        // Require password confirmation for security
+        if (!password) {
+            return next(new ExpressError(400, "Please provide your password to confirm account deletion."));
+        }
+
+        // Get user with password
+        const user = await User.findById(req.user.id).select("+password");
+
+        // Verify password
+        const isMatch = await user.comparePassword(password);
+        if (!isMatch) {
+            return next(new ExpressError(401, "Password is incorrect. Account deletion cancelled."));
+        }
+
+        // Check for active orders
+        const activeOrders = await Order.countDocuments({
+            user: user._id,
+            status: { $nin: ["Delivered", "Cancelled"] }
+        });
+
+        if (activeOrders > 0) {
+            return next(new ExpressError(400, 
+                `Cannot delete account. You have ${activeOrders} active order(s). Please wait until all orders are delivered or cancel them first.`
+            ));
+        }
+
+        // For couriers, unassign their active orders
+        if (user.role === "courier") {
+            await Order.updateMany(
+                { 
+                    courier: user._id,
+                    status: { $nin: ["Delivered", "Cancelled"] }
+                },
+                { 
+                    $set: { courier: null },
+                    $push: {
+                        statusHistory: {
+                            status: "Pending",
+                            timestamp: new Date(),
+                            note: "Courier account deleted",
+                            updatedBy: user._id
+                        }
+                    }
+                }
+            );
+        }
+
+        // Prevent admin self-deletion if last admin
+        if (user.role === "admin") {
+            const adminCount = await User.countDocuments({ 
+                role: "admin", 
+                isActive: true,
+                deletedAt: null 
+            });
+
+            if (adminCount <= 1) {
+                return next(new ExpressError(400, 
+                    "Cannot delete account. You are the last admin. Promote another user to admin first."
+                ));
+            }
+        }
+
+        // Perform soft delete
+        user.isActive = false;
+        user.deletedAt = new Date();
+        await user.save();
+
+        res.json({
+            success: true,
+            message: "Your account has been deleted successfully. We're sorry to see you go!"
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     register,
     login,
     getMe,
     updateProfile,
-    changePassword
+    changePassword,
+    deleteAccount
 };

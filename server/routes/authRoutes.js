@@ -58,4 +58,7 @@ router.put("/profile", authenticate, authController.updateProfile);
 // PUT /api/auth/change-password - Change password (Protected)
 router.put("/change-password", authenticate, authController.changePassword);
 
+// DELETE /api/auth/delete-account - Self-delete account (Protected)
+router.delete("/delete-account", authenticate, authController.deleteAccount);
+
 module.exports = router;
