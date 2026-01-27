@@ -25,6 +25,7 @@ import NotFound from './NotFound';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import UserManagement from './pages/admin/UserManagement';
 import OrderManagement from './pages/admin/OrderManagement';
+import ApplicationManagement from './pages/admin/ApplicationManagement';
 
 function App() {
   return (
@@ -101,6 +102,12 @@ function App() {
             <Route path="/admin/orders" element={
               <ProtectedRoute allowedRoles={["admin"]}>
                 <OrderManagement />
+              </ProtectedRoute>
+            } />
+
+            <Route path="/admin/applications" element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <ApplicationManagement />
               </ProtectedRoute>
             } />
 

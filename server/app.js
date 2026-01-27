@@ -7,6 +7,7 @@ require("dotenv").config();
 const authRoutes = require("./routes/authRoutes");
 const orderRoutes = require("./routes/orderRoutes");
 const userRoutes = require("./routes/userRoutes");
+const applicationRoutes = require("./routes/applicationRoutes");
 
 // Import error handler
 const ExpressError = require("./utils/expressError");
@@ -40,7 +41,8 @@ app.get("/", (req, res) => {
         endpoints: {
             auth: "/api/auth",
             orders: "/api/orders",
-            users: "/api/users"
+            users: "/api/users",
+            applications: "/api/applications"
         }
     });
 });
@@ -53,6 +55,7 @@ app.get("/health", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/applications", applicationRoutes);
 
 // 404 handler
 app.use((req, res, next) => {

@@ -220,3 +220,96 @@
     color: #666;
 }
 
+/* Courier Application Styles */
+.courier-card {
+    border: 1px solid #d1fae5;
+}
+
+.courier-header {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+}
+
+.application-status {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: 8px;
+}
+
+.application-status.pending {
+    background: #fef3c7;
+}
+
+.application-status.rejected {
+    background: #fee2e2;
+}
+
+.application-status.approved {
+    background: #d1fae5;
+}
+
+.application-status .status-icon {
+    font-size: 1.5rem;
+    margin-top: 0.25rem;
+}
+
+.application-status.pending .status-icon {
+    color: #d97706;
+}
+
+.application-status.rejected .status-icon {
+    color: #dc2626;
+}
+
+.application-status.approved .status-icon {
+    color: #059669;
+}
+
+.application-status h6 {
+    margin-bottom: 0.25rem;
+    font-weight: 600;
+}
+
+/* Courier Modal */
+.courier-modal {
+    background: white;
+    border-radius: 12px;
+    max-width: 600px;
+    width: 100%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: modalSlideIn 0.2s ease;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.courier-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    border-bottom: 1px solid #e0e0e0;
+    position: sticky;
+    top: 0;
+    background: white;
+    z-index: 10;
+}
+
+.courier-modal-header h4 {
+    margin: 0;
+    color: #059669;
+}
+
+.courier-modal-body {
+    padding: 1.5rem;
+}
+
+.courier-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #e0e0e0;
+    background: #f9fafb;
+}
+

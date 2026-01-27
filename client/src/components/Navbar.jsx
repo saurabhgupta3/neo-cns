@@ -60,6 +60,11 @@ export default function Navbar() {
                                                         Manage Orders
                                                     </Link>
                                                 </li>
+                                                <li>
+                                                    <Link className="dropdown-item" to="/admin/applications">
+                                                        Courier Applications
+                                                    </Link>
+                                                </li>
                                             </ul>
                                         </div>
                                     </>

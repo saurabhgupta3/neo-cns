@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { toast } from "react-toastify";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faEdit, faLock, faSave, faTimes, faTrash, faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
+import { faUser, faEdit, faLock, faSave, faTimes, faTrash, faExclamationTriangle, faTruck, faCheck, faClock, faTimesCircle } from "@fortawesome/free-solid-svg-icons";
 import "./Profile.css";
 
 export default function Profile() {
@@ -12,9 +12,21 @@ export default function Profile() {
     const [isEditing, setIsEditing] = useState(false);
     const [showPasswordForm, setShowPasswordForm] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [showCourierModal, setShowCourierModal] = useState(false);
     const [deletePassword, setDeletePassword] = useState("");
     const [loading, setLoading] = useState(false);
     const [deleteLoading, setDeleteLoading] = useState(false);
+    const [courierLoading, setCourierLoading] = useState(false);
+    const [myApplications, setMyApplications] = useState([]);
+
+    const [courierForm, setCourierForm] = useState({
+        vehicleType: "",
+        vehicleNumber: "",
+        drivingLicense: "",
+        experience: "",
+        workHours: "",
+        motivation: ""
+    });
 
     const [profileData, setProfileData] = useState({
         name: "",
@@ -35,8 +47,24 @@ export default function Profile() {
                 phone: user.phone || "",
                 address: user.address || ""
             });
+            // Fetch user's courier applications
+            if (user.role === "user") {
+                fetchMyApplications();
+            }
         }
     }, [user]);
+
+    const fetchMyApplications = async () => {
+        try {
+            const res = await authFetch("/applications/my-applications");
+            const data = await res.json();
+            if (res.ok) {
+                setMyApplications(data.applications || []);
+            }
+        } catch (error) {
+            console.error("Error fetching applications:", error);
+        }
+    };
 
     const handleProfileChange = (e) => {
         setProfileData({
@@ -136,6 +164,43 @@ export default function Profile() {
             .join("")
             .toUpperCase()
             .slice(0, 2);
+    };
+
+    const handleCourierSubmit = async (e) => {
+        e.preventDefault();
+        setCourierLoading(true);
+
+        try {
+            const res = await authFetch("/applications/courier", {
+                method: "POST",
+                body: courierForm
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                toast.success(data.message);
+                setShowCourierModal(false);
+                setCourierForm({
+                    vehicleType: "",
+                    vehicleNumber: "",
+                    drivingLicense: "",
+                    experience: "",
+                    workHours: "",
+                    motivation: ""
+                });
+                fetchMyApplications();
+            } else {
+                toast.error(data.message || "Failed to submit application");
+            }
+        } catch (error) {
+            toast.error(error.message);
+        } finally {
+            setCourierLoading(false);
+        }
+    };
+
+    const getPendingApplication = () => {
+        return myApplications.find(app => app.status === "pending");
     };
 
     if (!user) {
@@ -374,6 +439,192 @@ export default function Profile() {
                     day: 'numeric'
                 })}
             </div>
+
+            {/* Become a Courier Card - Only for regular users */}
+            {user.role === "user" && (
+                <div className="profile-card courier-card">
+                    <div className="profile-card-header courier-header">
+                        <h5>
+                            <FontAwesomeIcon icon={faTruck} className="me-2" />
+                            Become a Courier
+                        </h5>
+                    </div>
+                    <div className="profile-card-body">
+                        {getPendingApplication() ? (
+                            <div className="application-status pending">
+                                <FontAwesomeIcon icon={faClock} className="status-icon" />
+                                <div>
+                                    <h6>Application Pending</h6>
+                                    <p className="text-muted mb-0 small">
+                                        Your courier application is under review. We'll notify you once it's processed.
+                                    </p>
+                                    <small className="text-muted">
+                                        Submitted on {new Date(getPendingApplication().createdAt).toLocaleDateString()}
+                                    </small>
+                                </div>
+                            </div>
+                        ) : myApplications.some(app => app.status === "rejected") &&
+                            !myApplications.some(app => app.status === "approved") ? (
+                            <div>
+                                <div className="application-status rejected mb-3">
+                                    <FontAwesomeIcon icon={faTimesCircle} className="status-icon" />
+                                    <div>
+                                        <h6>Previous Application Rejected</h6>
+                                        <p className="text-muted mb-0 small">
+                                            {myApplications.find(app => app.status === "rejected")?.adminNotes || "Application did not meet requirements."}
+                                        </p>
+                                    </div>
+                                </div>
+                                <button
+                                    className="btn btn-outline-success"
+                                    onClick={() => setShowCourierModal(true)}
+                                >
+                                    <FontAwesomeIcon icon={faTruck} className="me-2" />
+                                    Apply Again
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 className="mb-1">Want to deliver packages?</h6>
+                                    <p className="text-muted mb-0 small">
+                                        Join our courier network and earn by delivering packages in your area.
+                                    </p>
+                                </div>
+                                <button
+                                    className="btn btn-success"
+                                    onClick={() => setShowCourierModal(true)}
+                                >
+                                    <FontAwesomeIcon icon={faTruck} className="me-2" />
+                                    Apply Now
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* Courier Application Modal */}
+            {showCourierModal && (
+                <div className="modal-overlay" onClick={() => setShowCourierModal(false)}>
+                    <div className="courier-modal" onClick={e => e.stopPropagation()}>
+                        <div className="courier-modal-header">
+                            <h4>
+                                <FontAwesomeIcon icon={faTruck} className="me-2" />
+                                Courier Application
+                            </h4>
+                            <button
+                                className="btn-close"
+                                onClick={() => setShowCourierModal(false)}
+                            ></button>
+                        </div>
+                        <form onSubmit={handleCourierSubmit}>
+                            <div className="courier-modal-body">
+                                <div className="row">
+                                    <div className="col-md-6 mb-3">
+                                        <label className="form-label">Vehicle Type *</label>
+                                        <select
+                                            className="form-select"
+                                            value={courierForm.vehicleType}
+                                            onChange={(e) => setCourierForm({ ...courierForm, vehicleType: e.target.value })}
+                                            required
+                                        >
+                                            <option value="">Select vehicle</option>
+                                            <option value="bicycle">Bicycle</option>
+                                            <option value="motorcycle">Motorcycle</option>
+                                            <option value="car">Car</option>
+                                            <option value="van">Van</option>
+                                            <option value="truck">Truck</option>
+                                        </select>
+                                    </div>
+                                    <div className="col-md-6 mb-3">
+                                        <label className="form-label">Vehicle Number</label>
+                                        <input
+                                            type="text"
+                                            className="form-control"
+                                            value={courierForm.vehicleNumber}
+                                            onChange={(e) => setCourierForm({ ...courierForm, vehicleNumber: e.target.value })}
+                                            placeholder="e.g., UP-16-AB-1234"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="row">
+                                    <div className="col-md-6 mb-3">
+                                        <label className="form-label">Driving License Number *</label>
+                                        <input
+                                            type="text"
+                                            className="form-control"
+                                            value={courierForm.drivingLicense}
+                                            onChange={(e) => setCourierForm({ ...courierForm, drivingLicense: e.target.value })}
+                                            required
+                                            placeholder="DL number"
+                                        />
+                                    </div>
+                                    <div className="col-md-6 mb-3">
+                                        <label className="form-label">Delivery Experience *</label>
+                                        <select
+                                            className="form-select"
+                                            value={courierForm.experience}
+                                            onChange={(e) => setCourierForm({ ...courierForm, experience: e.target.value })}
+                                            required
+                                        >
+                                            <option value="">Select experience</option>
+                                            <option value="none">No experience</option>
+                                            <option value="less-than-1">Less than 1 year</option>
+                                            <option value="1-3">1-3 years</option>
+                                            <option value="3-5">3-5 years</option>
+                                            <option value="more-than-5">More than 5 years</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="mb-3">
+                                    <label className="form-label">Preferred Work Hours *</label>
+                                    <select
+                                        className="form-select"
+                                        value={courierForm.workHours}
+                                        onChange={(e) => setCourierForm({ ...courierForm, workHours: e.target.value })}
+                                        required
+                                    >
+                                        <option value="">Select availability</option>
+                                        <option value="full-time">Full-time (8+ hours/day)</option>
+                                        <option value="part-time">Part-time (4-6 hours/day)</option>
+                                        <option value="weekends">Weekends only</option>
+                                        <option value="flexible">Flexible schedule</option>
+                                    </select>
+                                </div>
+                                <div className="mb-3">
+                                    <label className="form-label">Why do you want to become a courier?</label>
+                                    <textarea
+                                        className="form-control"
+                                        rows="3"
+                                        value={courierForm.motivation}
+                                        onChange={(e) => setCourierForm({ ...courierForm, motivation: e.target.value })}
+                                        placeholder="Tell us about yourself and why you'd be a great courier..."
+                                        maxLength={500}
+                                    ></textarea>
+                                    <small className="text-muted">{courierForm.motivation.length}/500</small>
+                                </div>
+                            </div>
+                            <div className="courier-modal-footer">
+                                <button
+                                    type="button"
+                                    className="btn btn-secondary"
+                                    onClick={() => setShowCourierModal(false)}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="btn btn-success"
+                                    disabled={courierLoading}
+                                >
+                                    {courierLoading ? "Submitting..." : "Submit Application"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
 
             {/* Delete Account Card */}
             <div className="profile-card danger-card">
