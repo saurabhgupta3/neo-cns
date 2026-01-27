@@ -8,11 +8,16 @@ const ExpressError = require("../utils/expressError");
 // All routes here require admin access
 router.use(authenticate, authorize("admin"));
 
-// GET /api/users - Get all users
+// GET /api/users - Get all users (excludes soft-deleted)
 router.get("/", wrapAsync(async (req, res) => {
-    const { role, search } = req.query;
+    const { role, search, includeDeleted } = req.query;
     
     let query = {};
+    
+    // Exclude soft-deleted users unless explicitly requested
+    if (!includeDeleted) {
+        query.deletedAt = null;
+    }
     
     if (role) {
         query.role = role;
@@ -34,12 +39,13 @@ router.get("/", wrapAsync(async (req, res) => {
     });
 }));
 
-// GET /api/users/couriers - Get all available couriers
+// GET /api/users/couriers - Get all available couriers (excludes soft-deleted)
 router.get("/couriers", wrapAsync(async (req, res) => {
     const couriers = await User.find({ 
         role: "courier", 
         isActive: true,
-        isAvailable: true 
+        isAvailable: true,
+        deletedAt: null
     });
     
     res.json({
@@ -124,17 +130,93 @@ router.put("/:id/toggle-active", wrapAsync(async (req, res) => {
     });
 }));
 
-// DELETE /api/users/:id - Delete user
+// DELETE /api/users/:id - Soft delete user with industry-standard rules
 router.delete("/:id", wrapAsync(async (req, res) => {
-    const user = await User.findByIdAndDelete(req.params.id);
+    const Order = require("../models/order");
+    
+    const user = await User.findById(req.params.id);
     
     if (!user) {
         return res.status(404).json({ success: false, message: "User not found" });
     }
     
+    // Prevent self-deletion
+    if (user._id.toString() === req.user._id.toString()) {
+        return res.status(400).json({ 
+            success: false, 
+            message: "You cannot delete your own account" 
+        });
+    }
+    
+    // ADMIN: Block deletion if last admin
+    if (user.role === "admin") {
+        const adminCount = await User.countDocuments({ 
+            role: "admin", 
+            isActive: true,
+            deletedAt: null 
+        });
+        
+        if (adminCount <= 1) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Cannot delete the last admin. Promote another user to admin first." 
+            });
+        }
+    }
+    
+    // USER: Check for active orders (not delivered/cancelled)
+    if (user.role === "user") {
+        const activeOrders = await Order.countDocuments({
+            user: user._id,
+            status: { $nin: ["Delivered", "Cancelled"] }
+        });
+        
+        if (activeOrders > 0) {
+            return res.status(400).json({ 
+                success: false, 
+                message: `Cannot delete user. They have ${activeOrders} active order(s). Wait until orders are delivered or cancel them first.` 
+            });
+        }
+    }
+    
+    // COURIER: Unassign all active orders before deletion
+    if (user.role === "courier") {
+        const unassignResult = await Order.updateMany(
+            { 
+                courier: user._id,
+                status: { $nin: ["Delivered", "Cancelled"] }
+            },
+            { 
+                $set: { courier: null },
+                $push: {
+                    statusHistory: {
+                        status: "Pending",
+                        timestamp: new Date(),
+                        note: "Courier removed - account deleted",
+                        updatedBy: req.user._id
+                    }
+                }
+            }
+        );
+        
+        // Log how many orders were unassigned
+        console.log(`Unassigned ${unassignResult.modifiedCount} orders from courier ${user.name}`);
+    }
+    
+    // Perform soft delete
+    user.isActive = false;
+    user.deletedAt = new Date();
+    await user.save();
+    
     res.json({
         success: true,
-        message: "User deleted successfully!"
+        message: `${user.role.charAt(0).toUpperCase() + user.role.slice(1)} "${user.name}" has been deleted successfully.`,
+        deletedUser: {
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            role: user.role
+        }
     });
 }));
 

@@ -25,6 +25,11 @@ const authenticate = async (req, res, next) => {
             return next(new ExpressError(401, "User not found. Token is invalid."));
         }
 
+        // Check if user is soft-deleted
+        if (user.deletedAt) {
+            return next(new ExpressError(401, "Account has been deleted. Please contact support."));
+        }
+
         if (!user.isActive) {
             return next(new ExpressError(401, "Account is deactivated. Please contact support."));
         }

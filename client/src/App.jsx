@@ -14,6 +14,7 @@ import Layout from './layouts/Layout';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Unauthorized from './pages/Unauthorized';
+import Profile from './pages/Profile';
 import OrdersList from "./OrdersList";
 import OrderDetails from './OrderDetails';
 import OrderNew from './OrderNew';
@@ -57,6 +58,12 @@ function App() {
             <Route path="/orders" element={
               <ProtectedRoute>
                 <OrdersList />
+              </ProtectedRoute>
+            } />
+
+            <Route path="/profile" element={
+              <ProtectedRoute>
+                <Profile />
               </ProtectedRoute>
             } />
 

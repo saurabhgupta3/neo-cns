@@ -52,6 +52,11 @@ const userSchema = new Schema({
         type: Boolean,
         default: true
     },
+    // Soft delete - when set, user is considered deleted
+    deletedAt: {
+        type: Date,
+        default: null
+    },
     createdAt: {
         type: Date,
         default: Date.now

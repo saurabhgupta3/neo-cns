@@ -70,13 +70,13 @@ export default function Navbar() {
                     <div className="navbar-nav">
                         {isAuthenticated ? (
                             <>
-                                <span className="nav-link text-muted">
+                                <Link to="/profile" className="nav-link text-muted">
                                     <FontAwesomeIcon icon={faUser} className="me-1" />
                                     {user?.name}
                                     <span className={`badge ms-1 ${user?.role === 'admin' ? 'bg-danger' :
                                         user?.role === 'courier' ? 'bg-warning text-dark' : 'bg-secondary'
                                         }`}>{user?.role}</span>
-                                </span>
+                                </Link>
                                 <button className="nav-link btn btn-link" onClick={handleLogout}>
                                     <FontAwesomeIcon icon={faSignOutAlt} className="me-1" />
                                     Logout
