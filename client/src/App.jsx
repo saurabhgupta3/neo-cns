@@ -10,24 +10,20 @@ import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute, PublicRoute } from './components/ProtectedRoute';
 import Layout from './layouts/Layout';
 
-// Pages
-import Login from './pages/Login';
-import Register from './pages/Register';
-import ForgotPassword from './pages/ForgotPassword';
-import ResetPassword from './pages/ResetPassword';
-import Unauthorized from './pages/Unauthorized';
+// Auth Pages
+import { Login, Register, ForgotPassword, ResetPassword, Unauthorized } from './pages/auth';
+
+// Order Pages
+import { OrdersList, OrderDetails, OrderNew, OrderEdit } from './pages/orders';
+
+// Common Pages
+import { NotFound } from './pages/common';
+
+// User Pages
 import Profile from './pages/Profile';
-import OrdersList from "./OrdersList";
-import OrderDetails from './OrderDetails';
-import OrderNew from './OrderNew';
-import OrderEdit from './OrderEdit';
-import NotFound from './NotFound';
 
 // Admin Pages
-import AdminDashboard from './pages/admin/AdminDashboard';
-import UserManagement from './pages/admin/UserManagement';
-import OrderManagement from './pages/admin/OrderManagement';
-import ApplicationManagement from './pages/admin/ApplicationManagement';
+import { AdminDashboard, UserManagement, OrderManagement, ApplicationManagement } from './pages/admin';
 
 function App() {
   return (

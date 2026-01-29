@@ -138,7 +138,7 @@ export default function ResetPassword() {
                             </div>
                         )}
                     </div>
-                        <br />
+                    <br />
                     <div className="form-group">
                         <label htmlFor="confirmPassword">
                             <FontAwesomeIcon icon={faLock} className="me-2" />
@@ -172,7 +172,7 @@ export default function ResetPassword() {
                             </small>
                         )}
                     </div>
-                        <br />
+                    <br />
                     <button
                         type="submit"
                         className="btn btn-primary w-100"

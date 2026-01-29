@@ -1,0 +1,14 @@
+/* Orders Page Styles */
+.order-show-link {
+    text-decoration: none;
+    color: inherit;
+}
+
+.order-show-link:hover .card {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.order-show-link .card {
+    transition: all 0.3s ease;
+}
