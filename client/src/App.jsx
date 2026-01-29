@@ -13,6 +13,8 @@ import Layout from './layouts/Layout';
 // Pages
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import Unauthorized from './pages/Unauthorized';
 import Profile from './pages/Profile';
 import OrdersList from "./OrdersList";
@@ -49,6 +51,16 @@ function App() {
           <Route path="/register" element={
             <PublicRoute>
               <Register />
+            </PublicRoute>
+          } />
+          <Route path="/forgot-password" element={
+            <PublicRoute>
+              <ForgotPassword />
+            </PublicRoute>
+          } />
+          <Route path="/reset-password/:token" element={
+            <PublicRoute>
+              <ResetPassword />
             </PublicRoute>
           } />
 

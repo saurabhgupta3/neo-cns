@@ -61,4 +61,11 @@ router.put("/change-password", authenticate, authController.changePassword);
 // DELETE /api/auth/delete-account - Self-delete account (Protected)
 router.delete("/delete-account", authenticate, authController.deleteAccount);
 
+// POST /api/auth/forgot-password - Request password reset (Public)
+router.post("/forgot-password", authController.forgotPassword);
+
+// POST /api/auth/reset-password/:token - Reset password with token (Public)
+router.post("/reset-password/:token", authController.resetPassword);
+
 module.exports = router;
+

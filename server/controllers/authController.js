@@ -293,11 +293,139 @@ const deleteAccount = async (req, res, next) => {
     }
 };
 
+// @desc    Forgot password - send reset email
+// @route   POST /api/auth/forgot-password
+// @access  Public
+const forgotPassword = async (req, res, next) => {
+    try {
+        const { email } = req.body;
+        const crypto = require("crypto");
+        const { sendPasswordResetEmail } = require("../utils/emailService");
+
+        console.log("📧 Forgot password request for:", email);
+
+        if (!email) {
+            return next(new ExpressError(400, "Please provide your email address."));
+        }
+
+        // Find user by email
+        const user = await User.findOne({ email: email.toLowerCase() });
+        console.log("👤 User found:", user ? user.email : "No user found");
+
+        // Always return success to prevent email enumeration attacks
+        if (!user) {
+            console.log("⚠️ No user found with this email");
+            return res.json({
+                success: true,
+                message: "If an account with that email exists, a password reset link has been sent."
+            });
+        }
+
+        // Check if account is deleted
+        if (user.deletedAt) {
+            console.log("⚠️ User account is deleted");
+            return res.json({
+                success: true,
+                message: "If an account with that email exists, a password reset link has been sent."
+            });
+        }
+
+        // Generate reset token
+        const resetToken = crypto.randomBytes(32).toString("hex");
+        console.log("🔑 Token generated");
+        
+        // Hash the token for storage (don't store plain token in DB)
+        const hashedToken = crypto
+            .createHash("sha256")
+            .update(resetToken)
+            .digest("hex");
+
+        // Set token and expiry (1 hour)
+        user.resetPasswordToken = hashedToken;
+        user.resetPasswordExpires = Date.now() + 60 * 60 * 1000; // 1 hour
+        await user.save({ validateBeforeSave: false });
+        console.log("💾 Token saved to database");
+
+        // Send email with the plain token (user receives this)
+        try {
+            console.log("📤 Sending email to:", user.email);
+            await sendPasswordResetEmail(user.email, resetToken, user.name);
+            console.log("✅ Email sent successfully");
+        } catch (emailError) {
+            console.error("❌ Email sending failed:", emailError.message);
+            // If email fails, clear the reset token
+            user.resetPasswordToken = undefined;
+            user.resetPasswordExpires = undefined;
+            await user.save({ validateBeforeSave: false });
+            
+            return next(new ExpressError(500, "Error sending email. Please try again later."));
+        }
+
+        res.json({
+            success: true,
+            message: "If an account with that email exists, a password reset link has been sent."
+        });
+    } catch (error) {
+        console.error("❌ Forgot password error:", error);
+        next(error);
+    }
+};
+
+// @desc    Reset password with token
+// @route   POST /api/auth/reset-password/:token
+// @access  Public
+const resetPassword = async (req, res, next) => {
+    try {
+        const { token } = req.params;
+        const { password } = req.body;
+        const crypto = require("crypto");
+
+        if (!password) {
+            return next(new ExpressError(400, "Please provide a new password."));
+        }
+
+        if (password.length < 6) {
+            return next(new ExpressError(400, "Password must be at least 6 characters."));
+        }
+
+        // Hash the token to compare with stored hash
+        const hashedToken = crypto
+            .createHash("sha256")
+            .update(token)
+            .digest("hex");
+
+        // Find user with valid token
+        const user = await User.findOne({
+            resetPasswordToken: hashedToken,
+            resetPasswordExpires: { $gt: Date.now() }
+        }).select("+resetPasswordToken +resetPasswordExpires");
+
+        if (!user) {
+            return next(new ExpressError(400, "Invalid or expired reset token. Please request a new one."));
+        }
+
+        // Update password and clear reset token
+        user.password = password;
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpires = undefined;
+        await user.save();
+
+        res.json({
+            success: true,
+            message: "Password has been reset successfully! You can now login with your new password."
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     register,
     login,
     getMe,
     updateProfile,
     changePassword,
-    deleteAccount
+    deleteAccount,
+    forgotPassword,
+    resetPassword
 };

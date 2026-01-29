@@ -75,7 +75,7 @@ export default function Login() {
                         />
                     </div>
 
-                    <div className="mb-4">
+                    <div className="mb-3">
                         <label htmlFor="password" className="form-label">Password</label>
                         <div className="input-group-password">
                             <input
@@ -97,6 +97,10 @@ export default function Login() {
                                 <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} />
                             </button>
                         </div>
+                    </div>
+
+                    <div className="forgot-password-link">
+                        <Link to="/forgot-password">Forgot Password?</Link>
                     </div>
 
                     <button type="submit" className="btn btn-primary" disabled={loading}>
