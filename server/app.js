@@ -1,7 +1,5 @@
 const express = require("express");
-const mongoose = require("mongoose");
 const cors = require("cors");
-require("dotenv").config();
 
 // Import routes
 const authRoutes = require("./routes/authRoutes");
@@ -18,19 +16,6 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// Database connection
-main()
-    .then(() => {
-        console.log("✅ Connected to MongoDB");
-    })
-    .catch((err) => {
-        console.error("❌ MongoDB connection error:", err);
-    });
-
-async function main() {
-    await mongoose.connect(process.env.MONGO_URL);
-}
 
 // Health check route
 app.get("/", (req, res) => {
@@ -66,10 +51,12 @@ app.use((req, res, next) => {
 app.use((err, req, res, next) => {
     let { statusCode = 500, message = "Something went wrong" } = err;
     
-    // Log error for debugging
-    console.error(`❌ Error: ${message}`);
-    if (process.env.NODE_ENV === "development") {
-        console.error(err.stack);
+    // Log error for debugging (skip in test environment)
+    if (process.env.NODE_ENV !== "test") {
+        console.error(`❌ Error: ${message}`);
+        if (process.env.NODE_ENV === "development") {
+            console.error(err.stack);
+        }
     }
     
     // Mongoose validation error
@@ -98,12 +85,4 @@ app.use((err, req, res, next) => {
     });
 });
 
-// Start server
-const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => {
-    console.log(`🚀 Server is running on port ${PORT}`);
-    console.log(`📍 API endpoints:`);
-    console.log(`   - Auth:   http://localhost:${PORT}/api/auth`);
-    console.log(`   - Orders: http://localhost:${PORT}/api/orders`);
-    console.log(`   - Users:  http://localhost:${PORT}/api/users`);
-});
+module.exports = app;
