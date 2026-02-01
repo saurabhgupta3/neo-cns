@@ -238,7 +238,7 @@ describe('Auth API', () => {
     });
     
     // ========== CHANGE PASSWORD TESTS ==========
-    describe('PUT /api/auth/password', () => {
+    describe('PUT /api/auth/change-password', () => {
         
         let token;
         
@@ -255,7 +255,7 @@ describe('Auth API', () => {
         
         it('should change password successfully', async () => {
             const res = await request(app)
-                .put('/api/auth/password')
+                .put('/api/auth/change-password')
                 .set('Authorization', `Bearer ${token}`)
                 .send({
                     currentPassword: 'oldpassword123',
@@ -278,7 +278,7 @@ describe('Auth API', () => {
         
         it('should fail with wrong current password', async () => {
             const res = await request(app)
-                .put('/api/auth/password')
+                .put('/api/auth/change-password')
                 .set('Authorization', `Bearer ${token}`)
                 .send({
                     currentPassword: 'wrongpassword',

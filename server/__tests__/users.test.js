@@ -1,4 +1,5 @@
 const request = require('supertest');
+const mongoose = require('mongoose');
 const app = require('../app');
 const User = require('../models/user');
 
@@ -6,11 +7,12 @@ describe('Users API (Admin Only)', () => {
     
     let adminToken;
     let userToken;
-    let testUserId;
+    let testUser;
+    let adminUser;
     
     beforeEach(async () => {
-        // Create admin user
-        const adminUser = await User.create({
+        // Create admin user directly in DB
+        adminUser = await User.create({
             name: 'Admin User',
             email: 'admin@example.com',
             password: 'password123',
@@ -26,16 +28,22 @@ describe('Users API (Admin Only)', () => {
             });
         adminToken = adminRes.body.token;
         
-        // Create regular user for testing
+        // Create regular user directly in DB for consistent ID handling
+        testUser = await User.create({
+            name: 'Regular User',
+            email: 'user@example.com',
+            password: 'password123',
+            role: 'user'
+        });
+        
+        // Login as user
         const userRes = await request(app)
-            .post('/api/auth/register')
+            .post('/api/auth/login')
             .send({
-                name: 'Regular User',
                 email: 'user@example.com',
                 password: 'password123'
             });
         userToken = userRes.body.token;
-        testUserId = userRes.body.user._id;
     });
     
     // ========== GET ALL USERS TESTS ==========
@@ -94,7 +102,7 @@ describe('Users API (Admin Only)', () => {
         
         it('admin should get single user', async () => {
             const res = await request(app)
-                .get(`/api/users/${testUserId}`)
+                .get(`/api/users/${testUser._id}`)
                 .set('Authorization', `Bearer ${adminToken}`);
             
             expect(res.statusCode).toBe(200);
@@ -103,8 +111,9 @@ describe('Users API (Admin Only)', () => {
         });
         
         it('should return 404 for non-existent user', async () => {
+            const fakeId = new mongoose.Types.ObjectId();
             const res = await request(app)
-                .get('/api/users/507f1f77bcf86cd799439011')
+                .get(`/api/users/${fakeId}`)
                 .set('Authorization', `Bearer ${adminToken}`);
             
             expect(res.statusCode).toBe(404);
@@ -116,7 +125,7 @@ describe('Users API (Admin Only)', () => {
         
         it('admin should update user details', async () => {
             const res = await request(app)
-                .put(`/api/users/${testUserId}`)
+                .put(`/api/users/${testUser._id}`)
                 .set('Authorization', `Bearer ${adminToken}`)
                 .send({
                     name: 'Updated User Name',
@@ -134,7 +143,7 @@ describe('Users API (Admin Only)', () => {
         
         it('admin should change user role', async () => {
             const res = await request(app)
-                .put(`/api/users/${testUserId}/role`)
+                .put(`/api/users/${testUser._id}/role`)
                 .set('Authorization', `Bearer ${adminToken}`)
                 .send({ role: 'courier' });
             
@@ -145,7 +154,7 @@ describe('Users API (Admin Only)', () => {
         
         it('should reject invalid role', async () => {
             const res = await request(app)
-                .put(`/api/users/${testUserId}/role`)
+                .put(`/api/users/${testUser._id}/role`)
                 .set('Authorization', `Bearer ${adminToken}`)
                 .send({ role: 'invalid-role' });
             
@@ -159,7 +168,7 @@ describe('Users API (Admin Only)', () => {
         it('admin should toggle user active status', async () => {
             // First toggle (deactivate)
             const res1 = await request(app)
-                .put(`/api/users/${testUserId}/toggle-active`)
+                .put(`/api/users/${testUser._id}/toggle-active`)
                 .set('Authorization', `Bearer ${adminToken}`);
             
             expect(res1.statusCode).toBe(200);
@@ -167,7 +176,7 @@ describe('Users API (Admin Only)', () => {
             
             // Second toggle (activate)
             const res2 = await request(app)
-                .put(`/api/users/${testUserId}/toggle-active`)
+                .put(`/api/users/${testUser._id}/toggle-active`)
                 .set('Authorization', `Bearer ${adminToken}`);
             
             expect(res2.statusCode).toBe(200);
@@ -180,28 +189,25 @@ describe('Users API (Admin Only)', () => {
         
         it('admin should soft delete user', async () => {
             const res = await request(app)
-                .delete(`/api/users/${testUserId}`)
+                .delete(`/api/users/${testUser._id}`)
                 .set('Authorization', `Bearer ${adminToken}`);
             
             expect(res.statusCode).toBe(200);
             expect(res.body.success).toBe(true);
             
             // Verify user is soft deleted
-            const user = await User.findById(testUserId);
+            const user = await User.findById(testUser._id);
             expect(user.deletedAt).toBeDefined();
             expect(user.isActive).toBe(false);
         });
         
-        it('should not delete last admin', async () => {
-            // Get admin user ID
-            const adminUser = await User.findOne({ email: 'admin@example.com' });
-            
+        it('admin cannot delete their own account', async () => {
             const res = await request(app)
                 .delete(`/api/users/${adminUser._id}`)
                 .set('Authorization', `Bearer ${adminToken}`);
             
             expect(res.statusCode).toBe(400);
-            expect(res.body.message).toContain('last admin');
+            expect(res.body.message).toContain('cannot delete your own account');
         });
     });
     
@@ -211,12 +217,12 @@ describe('Users API (Admin Only)', () => {
         it('admin should restore deleted user', async () => {
             // First delete the user
             await request(app)
-                .delete(`/api/users/${testUserId}`)
+                .delete(`/api/users/${testUser._id}`)
                 .set('Authorization', `Bearer ${adminToken}`);
             
             // Then restore
             const res = await request(app)
-                .put(`/api/users/${testUserId}/restore`)
+                .put(`/api/users/${testUser._id}/restore`)
                 .set('Authorization', `Bearer ${adminToken}`);
             
             expect(res.statusCode).toBe(200);
@@ -227,7 +233,7 @@ describe('Users API (Admin Only)', () => {
         
         it('should fail to restore non-deleted user', async () => {
             const res = await request(app)
-                .put(`/api/users/${testUserId}/restore`)
+                .put(`/api/users/${testUser._id}/restore`)
                 .set('Authorization', `Bearer ${adminToken}`);
             
             expect(res.statusCode).toBe(400);
