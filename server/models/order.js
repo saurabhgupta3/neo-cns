@@ -88,6 +88,11 @@ const orderSchema = new Schema({
         type: Number,
         required: true,
     },
+    distanceMethod: {
+        type: String,
+        enum: ['openrouteservice', 'haversine', 'lookup'],
+        default: 'haversine'
+    },
     price: {
         type: Number,
         required: true,

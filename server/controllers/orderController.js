@@ -1,5 +1,5 @@
 const Order = require("../models/order");
-const { calculateDistance, calculatePrice } = require("../utils/orderUtils");
+const { calculateDistance, calculatePrice } = require("../utils/distanceService");
 const ExpressError = require("../utils/expressError");
 
 // @desc    Get all orders (role-based filtering)
@@ -63,9 +63,18 @@ const createOrder = async (req, res, next) => {
     try {
         const orderData = req.body;
         
-        // Calculate distance and price
-        orderData.distance = calculateDistance(orderData.pickupAddress, orderData.deliveryAddress);
-        orderData.price = calculatePrice(orderData.weight, orderData.distance);
+        // Calculate distance and price (async - uses real distance API)
+        try {
+            const distanceResult = await calculateDistance(orderData.pickupAddress, orderData.deliveryAddress);
+            orderData.distance = distanceResult.distance;
+            orderData.distanceMethod = distanceResult.method; // Track which method was used
+            orderData.price = calculatePrice(orderData.weight, orderData.distance);
+            
+            console.log(`✅ Order distance: ${orderData.distance} km (via ${distanceResult.method})`);
+        } catch (distanceError) {
+            console.error('❌ Distance calculation failed:', distanceError.message);
+            return next(new ExpressError(400, distanceError.message));
+        }
         
         // Attach user to order
         orderData.user = req.user._id;
@@ -122,11 +131,17 @@ const updateOrder = async (req, res, next) => {
         
         // Recalculate distance and price if addresses changed
         if (orderData.pickupAddress || orderData.deliveryAddress) {
-            orderData.distance = calculateDistance(
-                orderData.pickupAddress || order.pickupAddress,
-                orderData.deliveryAddress || order.deliveryAddress
-            );
-            orderData.price = calculatePrice(orderData.weight || order.weight, orderData.distance);
+            try {
+                const distanceResult = await calculateDistance(
+                    orderData.pickupAddress || order.pickupAddress,
+                    orderData.deliveryAddress || order.deliveryAddress
+                );
+                orderData.distance = distanceResult.distance;
+                orderData.distanceMethod = distanceResult.method;
+                orderData.price = calculatePrice(orderData.weight || order.weight, orderData.distance);
+            } catch (distanceError) {
+                return next(new ExpressError(400, distanceError.message));
+            }
         }
         
         const updatedOrder = await Order.findByIdAndUpdate(id, orderData, { new: true, runValidators: true })
