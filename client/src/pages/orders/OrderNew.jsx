@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { toast } from "react-toastify";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCloudUploadAlt, faImage, faTimes } from "@fortawesome/free-solid-svg-icons";
 import "./Orders.css";
 
 export default function OrderNew() {
@@ -15,6 +17,9 @@ export default function OrderNew() {
     });
     const [validated, setValidated] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [uploadingImage, setUploadingImage] = useState(false);
+    const [imagePreview, setImagePreview] = useState(null);
+    const fileInputRef = useRef(null);
 
     const navigate = useNavigate();
     const { authFetch } = useAuth();
@@ -24,6 +29,87 @@ export default function OrderNew() {
             ...formData,
             [e.target.name]: e.target.value
         });
+    };
+
+    const handleImageUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        // Validate file size (5MB max)
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error("Image size must be less than 5MB");
+            return;
+        }
+
+        // Validate file type
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+        if (!allowedTypes.includes(file.type)) {
+            toast.error("Only JPG, PNG, GIF and WebP images are allowed");
+            return;
+        }
+
+        // Show preview
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setImagePreview(reader.result);
+        };
+        reader.readAsDataURL(file);
+
+        // Upload to server
+        setUploadingImage(true);
+        try {
+            const formDataUpload = new FormData();
+            formDataUpload.append('image', file);
+
+            const token = localStorage.getItem('token');
+            const res = await fetch('http://localhost:8080/api/upload/image', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                body: formDataUpload
+            });
+
+            const data = await res.json();
+
+            if (res.ok) {
+                setFormData(prev => ({ ...prev, image: data.imageUrl }));
+                toast.success("Image uploaded successfully!");
+            } else {
+                toast.error(data.message || "Failed to upload image");
+                setImagePreview(null);
+            }
+        } catch (err) {
+            console.error("Error uploading image:", err);
+            toast.error("Failed to upload image");
+            setImagePreview(null);
+        } finally {
+            setUploadingImage(false);
+        }
+    };
+
+    const removeImage = async () => {
+        if (formData.image && formData.image.includes('cloudinary')) {
+            try {
+                const token = localStorage.getItem('token');
+                await fetch('http://localhost:8080/api/upload/image', {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ imageUrl: formData.image })
+                });
+            } catch (err) {
+                console.error("Error deleting image:", err);
+            }
+        }
+
+        setFormData(prev => ({ ...prev, image: "" }));
+        setImagePreview(null);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = "";
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -128,7 +214,7 @@ export default function OrderNew() {
                                         id="pickupAddress"
                                         name="pickupAddress"
                                         className="form-control"
-                                        placeholder="Enter pickup address"
+                                        placeholder="Enter pickup address (include city name)"
                                         value={formData.pickupAddress}
                                         onChange={handleChange}
                                         required
@@ -147,7 +233,7 @@ export default function OrderNew() {
                                         id="deliveryAddress"
                                         name="deliveryAddress"
                                         className="form-control"
-                                        placeholder="Enter delivery address"
+                                        placeholder="Enter delivery address (include city name)"
                                         value={formData.deliveryAddress}
                                         onChange={handleChange}
                                         required
@@ -180,17 +266,55 @@ export default function OrderNew() {
                                     </div>
 
                                     <div className="col-md-6 mb-3">
-                                        <label htmlFor="image" className="form-label">
-                                            Image Link (Optional)
+                                        <label className="form-label">
+                                            Package Image (Optional)
                                         </label>
+
+                                        {/* Image Preview */}
+                                        {imagePreview ? (
+                                            <div className="position-relative mb-2">
+                                                <img
+                                                    src={imagePreview}
+                                                    alt="Preview"
+                                                    className="img-thumbnail"
+                                                    style={{ maxHeight: '150px', objectFit: 'cover' }}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-danger btn-sm position-absolute top-0 end-0"
+                                                    onClick={removeImage}
+                                                    style={{ transform: 'translate(50%, -50%)' }}
+                                                >
+                                                    <FontAwesomeIcon icon={faTimes} />
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div
+                                                className="border rounded p-4 text-center bg-light"
+                                                style={{ cursor: 'pointer' }}
+                                                onClick={() => fileInputRef.current?.click()}
+                                            >
+                                                {uploadingImage ? (
+                                                    <>
+                                                        <div className="spinner-border spinner-border-sm text-primary mb-2" />
+                                                        <p className="mb-0 small">Uploading...</p>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <FontAwesomeIcon icon={faCloudUploadAlt} size="2x" className="text-muted mb-2" />
+                                                        <p className="mb-0 small text-muted">Click to upload image</p>
+                                                        <p className="mb-0 small text-muted">(Max 5MB, JPG/PNG/GIF)</p>
+                                                    </>
+                                                )}
+                                            </div>
+                                        )}
+
                                         <input
-                                            type="url"
-                                            id="image"
-                                            name="image"
-                                            className="form-control"
-                                            placeholder="Enter image URL"
-                                            value={formData.image}
-                                            onChange={handleChange}
+                                            type="file"
+                                            ref={fileInputRef}
+                                            accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                                            onChange={handleImageUpload}
+                                            style={{ display: 'none' }}
                                         />
                                     </div>
                                 </div>
@@ -199,7 +323,7 @@ export default function OrderNew() {
                                     <button
                                         type="submit"
                                         className="btn btn-primary"
-                                        disabled={loading}
+                                        disabled={loading || uploadingImage}
                                     >
                                         {loading ? (
                                             <>
