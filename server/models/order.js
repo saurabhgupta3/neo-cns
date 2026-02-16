@@ -104,10 +104,18 @@ const orderSchema = new Schema({
     actualDeliveryTime: {
         type: Date
     },
+    etaMinutes: {
+        type: Number
+    },
     etaPredictionConfidence: {
         type: Number,
         min: 0,
         max: 1
+    },
+    etaMethod: {
+        type: String,
+        enum: ['ml_prediction', 'fallback_formula', null],
+        default: null
     },
     // Fraud detection fields
     riskScore: {

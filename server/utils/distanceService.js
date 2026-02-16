@@ -114,6 +114,24 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
     return roadDistanceApprox;
 }
 
+/**
+ * Pure Haversine Formula - Returns straight-line distance WITHOUT road multiplier
+ * Used for ML predictions to match training data (trained on pure Haversine)
+ */
+function pureHaversineDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371; // Earth's radius in kilometers
+
+    const dLat = toRadians(lat2 - lat1);
+    const dLon = toRadians(lon2 - lon1);
+
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) *
+              Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c; // Pure straight-line distance, no multiplier
+}
+
 function toRadians(degrees) {
     return degrees * (Math.PI / 180);
 }
@@ -123,7 +141,7 @@ function toRadians(degrees) {
  * 
  * @param {string} pickupAddress - Pickup location address
  * @param {string} deliveryAddress - Delivery location address
- * @returns {Promise<{distance: number, method: string}>} - Distance in km and method used
+ * @returns {Promise<Object>} - Distance info including road distance, haversine distance, and coordinates
  */
 async function calculateDistance(pickupAddress, deliveryAddress) {
     console.log(`\n🚚 Calculating distance:`);
@@ -145,21 +163,40 @@ async function calculateDistance(pickupAddress, deliveryAddress) {
         throw new Error(`Could not find delivery location: "${deliveryAddress}". Please enter a valid address with city name.`);
     }
     
-    // Step 2: Try OpenRouteService API for road distance
+    // Calculate pure Haversine distance (for ML predictions - matches training data)
+    const haversineDistForML = pureHaversineDistance(
+        pickupCoords.lat, pickupCoords.lng,
+        deliveryCoords.lat, deliveryCoords.lng
+    );
+    console.log(`📍 Pure Haversine (for ML): ${haversineDistForML.toFixed(2)} km`);
+    
+    // Step 2: Try OpenRouteService API for road distance (for display to user)
     try {
         const distance = await getDistanceFromORS(pickupCoords, deliveryCoords);
-        return { distance: Math.round(distance), method: 'openrouteservice' };
+        return {
+            distance: Math.round(distance),
+            method: 'openrouteservice',
+            haversineDistance: haversineDistForML,
+            pickupCoords,
+            deliveryCoords
+        };
     } catch (error) {
         console.log('⚠️ Falling back to Haversine formula...');
     }
     
-    // Step 3: Fallback to Haversine formula
+    // Step 3: Fallback to Haversine formula (with 1.3x for road approximation)
     try {
         const distance = haversineDistance(
             pickupCoords.lat, pickupCoords.lng,
             deliveryCoords.lat, deliveryCoords.lng
         );
-        return { distance: Math.round(distance), method: 'haversine' };
+        return {
+            distance: Math.round(distance),
+            method: 'haversine',
+            haversineDistance: haversineDistForML,
+            pickupCoords,
+            deliveryCoords
+        };
     } catch (error) {
         throw new Error('Failed to calculate distance. Please try again.');
     }
@@ -181,5 +218,6 @@ module.exports = {
     calculateDistance,
     calculatePrice,
     haversineDistance,
+    pureHaversineDistance,
     geocodeAddress
 };

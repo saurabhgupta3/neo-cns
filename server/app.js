@@ -7,6 +7,7 @@ const orderRoutes = require("./routes/orderRoutes");
 const userRoutes = require("./routes/userRoutes");
 const applicationRoutes = require("./routes/applicationRoutes");
 const uploadRoutes = require("./routes/uploadRoutes");
+const etaRoutes = require("./routes/etaRoutes");
 
 // Import error handler
 const ExpressError = require("./utils/expressError");
@@ -29,7 +30,8 @@ app.get("/", (req, res) => {
             orders: "/api/orders",
             users: "/api/users",
             applications: "/api/applications",
-            upload: "/api/upload"
+            upload: "/api/upload",
+            eta: "/api/eta"
         }
     });
 });
@@ -44,6 +46,7 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/applications", applicationRoutes);
 app.use("/api/upload", uploadRoutes);
+app.use("/api/eta", etaRoutes);
 
 // 404 handler
 app.use((req, res, next) => {

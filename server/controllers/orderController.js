@@ -1,5 +1,6 @@
 const Order = require("../models/order");
 const { calculateDistance, calculatePrice } = require("../utils/distanceService");
+const { predictETA } = require("../utils/etaService");
 const ExpressError = require("../utils/expressError");
 
 // @desc    Get all orders (role-based filtering)
@@ -64,16 +65,38 @@ const createOrder = async (req, res, next) => {
         const orderData = req.body;
         
         // Calculate distance and price (async - uses real distance API)
+        let distanceResult;
         try {
-            const distanceResult = await calculateDistance(orderData.pickupAddress, orderData.deliveryAddress);
-            orderData.distance = distanceResult.distance;
+            distanceResult = await calculateDistance(orderData.pickupAddress, orderData.deliveryAddress);
+            orderData.distance = distanceResult.distance; // Road distance for display
             orderData.distanceMethod = distanceResult.method; // Track which method was used
             orderData.price = calculatePrice(orderData.weight, orderData.distance);
             
             console.log(`✅ Order distance: ${orderData.distance} km (via ${distanceResult.method})`);
+            console.log(`📍 Haversine distance (for ML): ${distanceResult.haversineDistance.toFixed(2)} km`);
         } catch (distanceError) {
             console.error('❌ Distance calculation failed:', distanceError.message);
             return next(new ExpressError(400, distanceError.message));
+        }
+        
+        // Predict ETA using ML service (uses Haversine distance to match training data)
+        try {
+            const etaResult = await predictETA({
+                distance: distanceResult.haversineDistance, // Pure Haversine - matches training data
+                weight: parseFloat(orderData.weight) || 1,
+                hourOfDay: new Date().getHours(),
+                trafficLevel: 2 // Default medium traffic
+            });
+            
+            orderData.estimatedDeliveryTime = etaResult.estimatedDeliveryTime;
+            orderData.etaPredictionConfidence = etaResult.confidence;
+            orderData.etaMinutes = etaResult.etaMinutes;
+            orderData.etaMethod = etaResult.method;
+            
+            console.log(`✅ ETA predicted: ${etaResult.etaFormatted} (${etaResult.method})`);
+        } catch (etaError) {
+            console.log('⚠️ ETA prediction failed, will be calculated later:', etaError.message);
+            // ETA is optional, don't fail the order creation
         }
         
         // Attach user to order
@@ -95,12 +118,29 @@ const createOrder = async (req, res, next) => {
         res.status(201).json({
             success: true,
             message: "Order created successfully!",
-            order: newOrder
+            order: newOrder,
+            eta: orderData.etaMinutes ? {
+                minutes: orderData.etaMinutes,
+                formatted: formatETA(orderData.etaMinutes),
+                estimatedDelivery: orderData.estimatedDeliveryTime,
+                confidence: orderData.etaPredictionConfidence,
+                method: orderData.etaMethod
+            } : null
         });
     } catch (error) {
         next(error);
     }
 };
+
+// Helper function to format ETA
+function formatETA(minutes) {
+    if (minutes >= 60) {
+        const hours = Math.floor(minutes / 60);
+        const mins = minutes % 60;
+        return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+    }
+    return `${minutes}m`;
+}
 
 // @desc    Update order
 // @route   PUT /api/orders/:id
