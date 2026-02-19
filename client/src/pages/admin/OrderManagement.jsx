@@ -160,6 +160,7 @@ export default function OrderManagement() {
                                 <th>Order</th>
                                 <th>Route</th>
                                 <th>Status</th>
+                                <th>ETA</th>
                                 <th>Price</th>
                                 <th>Courier</th>
                                 <th>Actions</th>
@@ -168,7 +169,7 @@ export default function OrderManagement() {
                         <tbody>
                             {filteredOrders.length === 0 ? (
                                 <tr>
-                                    <td colSpan="6" className="text-center text-muted py-4">
+                                    <td colSpan="7" className="text-center text-muted py-4">
                                         No orders found
                                     </td>
                                 </tr>
@@ -191,6 +192,21 @@ export default function OrderManagement() {
                                             <span className={`status-badge ${order.status.toLowerCase().replace(' ', '-')}`}>
                                                 {order.status}
                                             </span>
+                                        </td>
+                                        <td>
+                                            {order.etaMinutes ? (
+                                                <span title={order.etaMethod === 'ml_prediction' ? 'ML Predicted' : 'Formula Estimated'}>
+                                                    {order.etaMinutes >= 60
+                                                        ? `${Math.floor(order.etaMinutes / 60)}h ${order.etaMinutes % 60}m`
+                                                        : `${order.etaMinutes}m`}
+                                                    <br />
+                                                    <small className={order.etaMethod === 'ml_prediction' ? 'text-success' : 'text-muted'}>
+                                                        {order.etaMethod === 'ml_prediction' ? '🤖 ML' : '📐 Formula'}
+                                                    </small>
+                                                </span>
+                                            ) : (
+                                                <span className="text-muted">—</span>
+                                            )}
                                         </td>
                                         <td>₹{order.price?.toLocaleString()}</td>
                                         <td>

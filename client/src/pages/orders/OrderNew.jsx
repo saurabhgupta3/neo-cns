@@ -62,7 +62,7 @@ export default function OrderNew() {
             formDataUpload.append('image', file);
 
             const token = localStorage.getItem('token');
-            const res = await fetch('http://localhost:8080/api/upload/image', {
+            const res = await fetch('http://localhost:5000/api/upload/image', {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -92,7 +92,7 @@ export default function OrderNew() {
         if (formData.image && formData.image.includes('cloudinary')) {
             try {
                 const token = localStorage.getItem('token');
-                await fetch('http://localhost:8080/api/upload/image', {
+                await fetch('http://localhost:5000/api/upload/image', {
                     method: 'DELETE',
                     headers: {
                         'Authorization': `Bearer ${token}`,

@@ -98,8 +98,18 @@ export default function OrdersList() {
                                         <b>{order.senderName} <span className="text-muted">→</span> {order.receiverName}</b>
                                         <br />
                                         <span className={`badge ${getStatusColor(order.status)}`}>{order.status}</span>
+                                        {order.etaMinutes && (
+                                            <span className="badge bg-dark ms-1" title={`ETA: ${order.etaMethod === 'ml_prediction' ? 'ML Predicted' : 'Estimated'}`}>
+                                                🕐 {order.etaMinutes >= 60
+                                                    ? `${Math.floor(order.etaMinutes / 60)}h ${order.etaMinutes % 60}m`
+                                                    : `${order.etaMinutes}m`}
+                                            </span>
+                                        )}
                                         <br />
                                         &#8377;{order.price?.toLocaleString("en-IN")}
+                                        {order.distance && (
+                                            <span className="text-muted ms-2">• {order.distance} km</span>
+                                        )}
                                     </p>
                                 </div>
                             </div>

@@ -24,7 +24,7 @@ CORS(app)  # Enable CORS for all routes
 
 # Configuration
 MODEL_PATH = 'models/eta_model.pkl'
-PORT = int(os.environ.get('ML_SERVICE_PORT', 5000))
+PORT = int(os.environ.get('ML_SERVICE_PORT', 5001))
 
 # Load model at startup
 model_data = None

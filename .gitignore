@@ -1,0 +1,10 @@
+# ML service
+ml-service/venv/
+ml-service/models/
+__pycache__/
+*.pyc
+*.pkl
+*.h5
+
+# Environment files
+.env

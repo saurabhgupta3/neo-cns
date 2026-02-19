@@ -127,6 +127,22 @@ export default function OrderDetails() {
                                                 <td><strong>Distance:</strong></td>
                                                 <td>{order.distance} km</td>
                                             </tr>
+                                            {order.etaMinutes && (
+                                                <tr>
+                                                    <td><strong>Time:</strong></td>
+                                                    <td>
+                                                        {order.etaMinutes >= 60
+                                                            ? `${Math.floor(order.etaMinutes / 60)}h ${order.etaMinutes % 60}m`
+                                                            : `${order.etaMinutes} minutes`}
+                                                    </td>
+                                                </tr>
+                                            )}
+                                            {order.estimatedDeliveryTime && (
+                                                <tr>
+                                                    <td><strong>Expected By:</strong></td>
+                                                    <td>{new Date(order.estimatedDeliveryTime).toLocaleString()}</td>
+                                                </tr>
+                                            )}
                                             <tr>
                                                 <td><strong>Pickup:</strong></td>
                                                 <td>{order.pickupAddress}</td>

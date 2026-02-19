@@ -8,7 +8,7 @@
 const axios = require('axios');
 
 // ML Service configuration
-const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://localhost:5000';
+const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://localhost:5001';
 const ML_TIMEOUT = 5000; // 5 seconds timeout
 
 /**

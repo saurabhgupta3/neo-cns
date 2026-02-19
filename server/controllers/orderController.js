@@ -179,6 +179,22 @@ const updateOrder = async (req, res, next) => {
                 orderData.distance = distanceResult.distance;
                 orderData.distanceMethod = distanceResult.method;
                 orderData.price = calculatePrice(orderData.weight || order.weight, orderData.distance);
+                
+                // Recalculate ETA with new Haversine distance
+                try {
+                    const etaResult = await predictETA({
+                        distance: distanceResult.haversineDistance,
+                        weight: parseFloat(orderData.weight || order.weight) || 1,
+                        hourOfDay: new Date().getHours(),
+                        trafficLevel: 2
+                    });
+                    orderData.estimatedDeliveryTime = etaResult.estimatedDeliveryTime;
+                    orderData.etaMinutes = etaResult.etaMinutes;
+                    orderData.etaMethod = etaResult.method;
+                    console.log(`✅ ETA recalculated: ${etaResult.etaFormatted}`);
+                } catch (etaError) {
+                    console.log('⚠️ ETA recalculation failed:', etaError.message);
+                }
             } catch (distanceError) {
                 return next(new ExpressError(400, distanceError.message));
             }
