@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { getAdjustedETA } from "../../utils/etaHelper";
 import { toast } from "react-toastify";
 import "./Orders.css";
 
@@ -127,17 +128,21 @@ export default function OrderDetails() {
                                                 <td><strong>Distance:</strong></td>
                                                 <td>{order.distance} km</td>
                                             </tr>
-                                            {order.etaMinutes && (
-                                                <tr>
-                                                    <td><strong>Time:</strong></td>
-                                                    <td>
-                                                        {order.etaMinutes >= 60
-                                                            ? `${Math.floor(order.etaMinutes / 60)}h ${order.etaMinutes % 60}m`
-                                                            : `${order.etaMinutes} minutes`}
-                                                    </td>
-                                                </tr>
-                                            )}
-                                            {order.estimatedDeliveryTime && (
+                                            {(() => {
+                                                const eta = getAdjustedETA(order.etaMinutes, order.status);
+                                                return eta ? (
+                                                    <tr>
+                                                        <td><strong>{eta.label}:</strong></td>
+                                                        <td>{eta.formatted}</td>
+                                                    </tr>
+                                                ) : order.status === "Delivered" ? (
+                                                    <tr>
+                                                        <td><strong>Status:</strong></td>
+                                                        <td className="text-success fw-bold">Delivered ✅</td>
+                                                    </tr>
+                                                ) : null;
+                                            })()}
+                                            {order.estimatedDeliveryTime && order.status !== "Delivered" && order.status !== "Cancelled" && (
                                                 <tr>
                                                     <td><strong>Expected By:</strong></td>
                                                     <td>{new Date(order.estimatedDeliveryTime).toLocaleString()}</td>

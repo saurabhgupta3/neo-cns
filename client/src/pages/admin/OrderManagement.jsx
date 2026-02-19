@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { getAdjustedETA } from "../../utils/etaHelper";
 import { toast } from "react-toastify";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBox, faSearch, faTruck, faEye } from "@fortawesome/free-solid-svg-icons";
@@ -194,19 +195,20 @@ export default function OrderManagement() {
                                             </span>
                                         </td>
                                         <td>
-                                            {order.etaMinutes ? (
-                                                <span title={order.etaMethod === 'ml_prediction' ? 'ML Predicted' : 'Formula Estimated'}>
-                                                    {order.etaMinutes >= 60
-                                                        ? `${Math.floor(order.etaMinutes / 60)}h ${order.etaMinutes % 60}m`
-                                                        : `${order.etaMinutes}m`}
-                                                    <br />
-                                                    <small className={order.etaMethod === 'ml_prediction' ? 'text-success' : 'text-muted'}>
-                                                        {order.etaMethod === 'ml_prediction' ? '🤖 ML' : '📐 Formula'}
-                                                    </small>
-                                                </span>
-                                            ) : (
-                                                <span className="text-muted">—</span>
-                                            )}
+                                            {(() => {
+                                                const eta = getAdjustedETA(order.etaMinutes, order.status);
+                                                if (order.status === "Delivered") return <span className="text-success">Delivered</span>;
+                                                if (order.status === "Cancelled") return <span className="text-muted">—</span>;
+                                                return eta ? (
+                                                    <span title={eta.label}>
+                                                        {eta.formatted}
+                                                        <br />
+                                                        <small className="text-muted">{eta.label}</small>
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-muted">—</span>
+                                                );
+                                            })()}
                                         </td>
                                         <td>₹{order.price?.toLocaleString()}</td>
                                         <td>

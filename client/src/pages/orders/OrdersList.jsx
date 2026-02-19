@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from 'react-router-dom';
 import { useAuth } from "../../context/AuthContext";
+import { getAdjustedETA } from "../../utils/etaHelper";
 import "./Orders.css";
 
 export default function OrdersList() {
@@ -79,42 +80,43 @@ export default function OrdersList() {
                 </div>
             ) : (
                 <div className="row row-cols-lg-3 row-cols-md-2 row-cols-sm-1 g-4">
-                    {orders.map((order) => (
-                        <Link to={`/orders/${order._id}`} key={order._id} className="order-show-link">
-                            <div className="card col h-100">
-                                <img
-                                    src={order.image}
-                                    alt="order"
-                                    className="card-img-top"
-                                    style={{ height: "20rem", objectFit: "cover" }}
-                                    onError={(e) => {
-                                        e.target.onerror = null;
-                                        e.target.src = "https://res.cloudinary.com/dfq3xkwrk/image/upload/v1762187021/ChatGPT_Image_Nov_3_2025_09_51_44_PM_ausbho.png";
-                                    }}
-                                />
-                                <div className="card-img-overlay"></div>
-                                <div className="card-body">
-                                    <p className="card-text">
-                                        <b>{order.senderName} <span className="text-muted">→</span> {order.receiverName}</b>
-                                        <br />
-                                        <span className={`badge ${getStatusColor(order.status)}`}>{order.status}</span>
-                                        {order.etaMinutes && (
-                                            <span className="badge bg-dark ms-1" title={`ETA: ${order.etaMethod === 'ml_prediction' ? 'ML Predicted' : 'Estimated'}`}>
-                                                🕐 {order.etaMinutes >= 60
-                                                    ? `${Math.floor(order.etaMinutes / 60)}h ${order.etaMinutes % 60}m`
-                                                    : `${order.etaMinutes}m`}
-                                            </span>
-                                        )}
-                                        <br />
-                                        &#8377;{order.price?.toLocaleString("en-IN")}
-                                        {order.distance && (
-                                            <span className="text-muted ms-2">• {order.distance} km</span>
-                                        )}
-                                    </p>
+                    {orders.map((order) => {
+                        const eta = getAdjustedETA(order.etaMinutes, order.status);
+                        return (
+                            <Link to={`/orders/${order._id}`} key={order._id} className="order-show-link">
+                                <div className="card col h-100">
+                                    <img
+                                        src={order.image}
+                                        alt="order"
+                                        className="card-img-top"
+                                        style={{ height: "20rem", objectFit: "cover" }}
+                                        onError={(e) => {
+                                            e.target.onerror = null;
+                                            e.target.src = "https://res.cloudinary.com/dfq3xkwrk/image/upload/v1762187021/ChatGPT_Image_Nov_3_2025_09_51_44_PM_ausbho.png";
+                                        }}
+                                    />
+                                    <div className="card-img-overlay"></div>
+                                    <div className="card-body">
+                                        <p className="card-text">
+                                            <b>{order.senderName} <span className="text-muted">→</span> {order.receiverName}</b>
+                                            <br />
+                                            <span className={`badge ${getStatusColor(order.status)}`}>{order.status}</span>
+                                            {eta && (
+                                                <span className="badge bg-dark ms-1" title={eta.label}>
+                                                    🕐 {eta.formatted}
+                                                </span>
+                                            )}
+                                            <br />
+                                            &#8377;{order.price?.toLocaleString("en-IN")}
+                                            {order.distance && (
+                                                <span className="text-muted ms-2">• {order.distance} km</span>
+                                            )}
+                                        </p>
+                                    </div>
                                 </div>
-                            </div>
-                        </Link>
-                    ))}
+                            </Link>
+                        );
+                    })}
                 </div>
             )}
         </div>
