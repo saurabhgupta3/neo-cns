@@ -1,10 +1,14 @@
 # ML service
 ml-service/venv/
 ml-service/models/
+ml-service/data/*.csv
 __pycache__/
 *.pyc
 *.pkl
 *.h5
+
+# Node
+node_modules/
 
 # Environment files
 .env

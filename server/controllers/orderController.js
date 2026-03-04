@@ -1,6 +1,7 @@
 const Order = require("../models/order");
 const { calculateDistance, calculatePrice } = require("../utils/distanceService");
 const { predictETA } = require("../utils/etaService");
+const { checkFraud } = require("../utils/fraudService");
 const ExpressError = require("../utils/expressError");
 
 // @desc    Get all orders (role-based filtering)
@@ -99,6 +100,24 @@ const createOrder = async (req, res, next) => {
             // ETA is optional, don't fail the order creation
         }
         
+        // Check fraud risk using ML service
+        try {
+            const fraudResult = await checkFraud({
+                amount: orderData.price,
+                paymentMethod: orderData.paymentMethod || 'COD',
+                hour: new Date().getHours()
+            });
+            
+            orderData.riskScore = fraudResult.riskScore;
+            orderData.fraudFlags = fraudResult.fraudFlags;
+            
+            console.log(`\u2705 Fraud check: ${fraudResult.riskLevel} risk (${fraudResult.riskScore})`);
+        } catch (fraudError) {
+            console.log('\u26a0\ufe0f Fraud check failed:', fraudError.message);
+            orderData.riskScore = 0;
+            orderData.fraudFlags = [];
+        }
+        
         // Attach user to order
         orderData.user = req.user._id;
         
@@ -125,7 +144,12 @@ const createOrder = async (req, res, next) => {
                 estimatedDelivery: orderData.estimatedDeliveryTime,
                 confidence: orderData.etaPredictionConfidence,
                 method: orderData.etaMethod
-            } : null
+            } : null,
+            fraud: {
+                riskScore: orderData.riskScore,
+                riskLevel: orderData.riskScore >= 0.6 ? 'high' : orderData.riskScore >= 0.3 ? 'medium' : 'low',
+                flags: orderData.fraudFlags
+            }
         });
     } catch (error) {
         next(error);

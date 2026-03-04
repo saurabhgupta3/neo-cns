@@ -148,6 +148,33 @@ export default function OrderDetails() {
                                                     <td>{new Date(order.estimatedDeliveryTime).toLocaleString()}</td>
                                                 </tr>
                                             )}
+                                            {order.riskScore !== undefined && order.riskScore !== null && (
+                                                <tr>
+                                                    <td><strong>Fraud Risk:</strong></td>
+                                                    <td>
+                                                        {(() => {
+                                                            const score = order.riskScore;
+                                                            const level = score >= 0.6 ? 'high' : score >= 0.3 ? 'medium' : 'low';
+                                                            const badgeClass = level === 'high' ? 'bg-danger' : level === 'medium' ? 'bg-warning text-dark' : 'bg-success';
+                                                            const icon = level === 'high' ? '🔴' : level === 'medium' ? '🟡' : '🟢';
+                                                            return (
+                                                                <>
+                                                                    <span className={`badge ${badgeClass}`}>
+                                                                        {icon} {level.toUpperCase()} ({(score * 100).toFixed(0)}%)
+                                                                    </span>
+                                                                    {order.fraudFlags?.length > 0 && (
+                                                                        <ul className="mb-0 mt-1 small text-muted">
+                                                                            {order.fraudFlags.map((flag, i) => (
+                                                                                <li key={i}>⚠️ {flag}</li>
+                                                                            ))}
+                                                                        </ul>
+                                                                    )}
+                                                                </>
+                                                            );
+                                                        })()}
+                                                    </td>
+                                                </tr>
+                                            )}
                                             <tr>
                                                 <td><strong>Pickup:</strong></td>
                                                 <td>{order.pickupAddress}</td>

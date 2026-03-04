@@ -162,6 +162,7 @@ export default function OrderManagement() {
                                 <th>Route</th>
                                 <th>Status</th>
                                 <th>ETA</th>
+                                <th>Risk</th>
                                 <th>Price</th>
                                 <th>Courier</th>
                                 <th>Actions</th>
@@ -170,7 +171,7 @@ export default function OrderManagement() {
                         <tbody>
                             {filteredOrders.length === 0 ? (
                                 <tr>
-                                    <td colSpan="7" className="text-center text-muted py-4">
+                                    <td colSpan="8" className="text-center text-muted py-4">
                                         No orders found
                                     </td>
                                 </tr>
@@ -207,6 +208,22 @@ export default function OrderManagement() {
                                                     </span>
                                                 ) : (
                                                     <span className="text-muted">—</span>
+                                                );
+                                            })()}
+                                        </td>
+                                        <td>
+                                            {(() => {
+                                                const score = order.riskScore || 0;
+                                                const level = score >= 0.6 ? 'high' : score >= 0.3 ? 'medium' : 'low';
+                                                const badgeClass = level === 'high' ? 'bg-danger' : level === 'medium' ? 'bg-warning text-dark' : 'bg-success';
+                                                const icon = level === 'high' ? '🔴' : level === 'medium' ? '🟡' : '🟢';
+                                                return (
+                                                    <span
+                                                        className={`badge ${badgeClass}`}
+                                                        title={order.fraudFlags?.length ? order.fraudFlags.join(', ') : 'No flags'}
+                                                    >
+                                                        {icon} {level.toUpperCase()}
+                                                    </span>
                                                 );
                                             })()}
                                         </td>

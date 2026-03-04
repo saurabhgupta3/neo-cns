@@ -13,7 +13,8 @@ export default function OrderNew() {
         pickupAddress: "",
         deliveryAddress: "",
         image: "",
-        weight: ""
+        weight: "",
+        paymentMethod: "COD"
     });
     const [validated, setValidated] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -264,6 +265,27 @@ export default function OrderNew() {
                                             Please enter a valid weight.
                                         </div>
                                     </div>
+
+                                    <div className="col-md-6 mb-3">
+                                        <label htmlFor="paymentMethod" className="form-label">
+                                            Payment Method *
+                                        </label>
+                                        <select
+                                            id="paymentMethod"
+                                            name="paymentMethod"
+                                            className="form-select"
+                                            value={formData.paymentMethod}
+                                            onChange={handleChange}
+                                            required
+                                        >
+                                            <option value="COD">💵 Cash on Delivery (COD)</option>
+                                            <option value="Prepaid">💳 Prepaid</option>
+                                            <option value="Wallet">👛 Wallet</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div className="row">
 
                                     <div className="col-md-6 mb-3">
                                         <label className="form-label">

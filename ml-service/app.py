@@ -1,12 +1,13 @@
 """
-ETA Prediction API Server
-=========================
-Flask API that serves ETA predictions for the Neo-CNS courier system.
+Neo-CNS ML Prediction API Server
+=================================
+Flask API that serves ML predictions for the Neo-CNS courier system.
 
 Endpoints:
-    POST /predict/eta - Predict delivery time
-    GET /health - Health check
-    GET /model/info - Model information
+    POST /predict/eta   - Predict delivery time
+    POST /predict/fraud - Detect payment fraud
+    GET /health         - Health check
+    GET /model/info     - Model information
 
 Usage:
     python app.py
@@ -24,27 +25,49 @@ CORS(app)  # Enable CORS for all routes
 
 # Configuration
 MODEL_PATH = 'models/eta_model.pkl'
+FRAUD_MODEL_PATH = 'models/fraud_model.pkl'
 PORT = int(os.environ.get('ML_SERVICE_PORT', 5001))
 
-# Load model at startup
+# ETA model
 model_data = None
 model = None
 feature_names = None
 
+# Fraud model
+fraud_model_data = None
+fraud_model = None
+fraud_feature_names = None
+
 def load_model():
-    """Load the trained model"""
+    """Load the trained ETA model"""
     global model_data, model, feature_names
     
     if os.path.exists(MODEL_PATH):
         model_data = joblib.load(MODEL_PATH)
         model = model_data['model']
         feature_names = model_data['feature_names']
-        print(f"✅ Model loaded from {MODEL_PATH}")
+        print(f"✅ ETA Model loaded from {MODEL_PATH}")
         print(f"   Features: {feature_names}")
         return True
     else:
-        print(f"⚠️ Model not found at {MODEL_PATH}")
+        print(f"⚠️ ETA Model not found at {MODEL_PATH}")
         print("   Run 'python train_model.py' first to train the model")
+        return False
+
+def load_fraud_model():
+    """Load the trained fraud detection model"""
+    global fraud_model_data, fraud_model, fraud_feature_names
+    
+    if os.path.exists(FRAUD_MODEL_PATH):
+        fraud_model_data = joblib.load(FRAUD_MODEL_PATH)
+        fraud_model = fraud_model_data['model']
+        fraud_feature_names = fraud_model_data['feature_names']
+        print(f"✅ Fraud Model loaded from {FRAUD_MODEL_PATH}")
+        print(f"   Features: {fraud_feature_names}")
+        return True
+    else:
+        print(f"⚠️ Fraud Model not found at {FRAUD_MODEL_PATH}")
+        print("   Run 'python train_fraud_model.py' first to train the model")
         return False
 
 
@@ -70,7 +93,8 @@ def health_check():
     """Health check endpoint"""
     return jsonify({
         'status': 'healthy',
-        'model_loaded': model is not None,
+        'eta_model_loaded': model is not None,
+        'fraud_model_loaded': fraud_model is not None,
         'timestamp': datetime.now().isoformat()
     })
 
@@ -234,6 +258,135 @@ def predict_eta():
         }), 500
 
 
+# ============================================================
+# FRAUD DETECTION ENDPOINT
+# ============================================================
+
+@app.route('/predict/fraud', methods=['POST'])
+def predict_fraud():
+    """
+    Predict fraud risk for a courier order.
+    
+    Request Body:
+    {
+        "amount": 4500,
+        "payment_type": "COD",
+        "hour": 3
+    }
+    
+    Response:
+    {
+        "success": true,
+        "risk_score": 0.78,
+        "is_fraud": true,
+        "risk_level": "high",
+        "fraud_flags": ["Unusual hour (3 AM)", "High amount"],
+        "method": "ml_prediction"
+    }
+    """
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'success': False, 'message': 'No data provided'}), 400
+        
+        amount = float(data.get('amount', 0))
+        payment_type = data.get('payment_type', 'COD')
+        hour = int(data.get('hour', datetime.now().hour))
+        
+        if amount <= 0:
+            return jsonify({'success': False, 'message': 'Valid amount is required'}), 400
+        
+        # Encode payment type to match training data
+        payment_mapping = {'COD': 0, 'Prepaid': 1, 'Wallet': 2}
+        type_encoded = payment_mapping.get(payment_type, 0)
+        
+        # Calculate derived features
+        avg_amount = 180000  # From training data average
+        amount_ratio = amount / avg_amount
+        is_high_amount = 1 if amount > 2 * avg_amount else 0
+        is_unusual_hour = 1 if 0 <= hour <= 5 else 0
+        balance_change_ratio = min(amount / max(amount * 2, 1), 1.0)  # Approximate
+        
+        # Prepare feature vector
+        features = np.array([[
+            amount,
+            type_encoded,
+            hour,
+            amount_ratio,
+            is_high_amount,
+            is_unusual_hour,
+            balance_change_ratio
+        ]])
+        
+        # Generate fraud flags
+        fraud_flags = []
+        if is_unusual_hour:
+            fraud_flags.append(f"Unusual hour ({hour}:00 AM)")
+        if is_high_amount:
+            fraud_flags.append("Unusually high amount")
+        if type_encoded == 0 and amount > 1000:
+            fraud_flags.append("High-value COD order")
+        if amount_ratio > 5:
+            fraud_flags.append(f"Amount {amount_ratio:.1f}x above average")
+        
+        if fraud_model is not None:
+            # ML Prediction
+            risk_score = float(fraud_model.predict_proba(features)[0][1])
+            is_fraud = bool(risk_score > 0.5)
+            method = 'ml_prediction'
+            
+            print(f"\n🚨 Fraud Check (ML): amount={amount}, type={payment_type}, hour={hour}")
+            print(f"   Risk Score: {risk_score:.4f}")
+            print(f"   Flags: {fraud_flags}")
+        else:
+            # Fallback rule-based scoring
+            risk_score = 0.0
+            if is_unusual_hour:
+                risk_score += 0.25
+            if is_high_amount:
+                risk_score += 0.25
+            if type_encoded == 0 and amount > 1000:
+                risk_score += 0.15
+            if amount_ratio > 5:
+                risk_score += 0.2
+            risk_score = min(risk_score, 1.0)
+            is_fraud = risk_score > 0.5
+            method = 'rule_based_fallback'
+            
+            print(f"\n🚨 Fraud Check (Rules): amount={amount}, type={payment_type}, hour={hour}")
+            print(f"   Risk Score: {risk_score:.4f}")
+        
+        # Determine risk level
+        if risk_score >= 0.6:
+            risk_level = 'high'
+        elif risk_score >= 0.3:
+            risk_level = 'medium'
+        else:
+            risk_level = 'low'
+        
+        return jsonify({
+            'success': True,
+            'risk_score': round(risk_score, 4),
+            'is_fraud': is_fraud,
+            'risk_level': risk_level,
+            'fraud_flags': fraud_flags,
+            'method': method,
+            'input': {
+                'amount': amount,
+                'payment_type': payment_type,
+                'hour': hour
+            }
+        }), 200
+        
+    except Exception as e:
+        print(f"❌ Fraud prediction error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Prediction error: {str(e)}'
+        }), 500
+
+
 @app.errorhandler(404)
 def not_found(e):
     return jsonify({
@@ -252,19 +405,25 @@ def internal_error(e):
 
 if __name__ == '__main__':
     print("=" * 60)
-    print("🚀 Neo-CNS ETA Prediction Service")
+    print("🚀 Neo-CNS ML Prediction Service")
     print("=" * 60)
     
-    # Load model
-    model_loaded = load_model()
+    # Load models
+    eta_loaded = load_model()
+    fraud_loaded = load_fraud_model()
     
-    if not model_loaded:
-        print("\n⚠️ Running with fallback formula (no ML model)")
-        print("   To use ML predictions, run 'python train_model.py' first\n")
+    if not eta_loaded:
+        print("\n⚠️ ETA: Running with fallback formula")
+        print("   Run 'python train_model.py' to train ETA model")
+    
+    if not fraud_loaded:
+        print("\n⚠️ Fraud: Running with rule-based fallback")
+        print("   Run 'python train_fraud_model.py' to train fraud model")
     
     print(f"\n🌐 Starting server on http://localhost:{PORT}")
-    print("   POST /predict/eta - Predict delivery time")
-    print("   GET /health - Health check")
-    print("   GET /model/info - Model information\n")
+    print("   POST /predict/eta   - Predict delivery time")
+    print("   POST /predict/fraud - Detect payment fraud")
+    print("   GET  /health        - Health check")
+    print("   GET  /model/info    - Model information\n")
     
     app.run(host='0.0.0.0', port=PORT, debug=True)
