@@ -8,6 +8,7 @@ const userRoutes = require("./routes/userRoutes");
 const applicationRoutes = require("./routes/applicationRoutes");
 const uploadRoutes = require("./routes/uploadRoutes");
 const etaRoutes = require("./routes/etaRoutes");
+const chatRoutes = require("./routes/chatRoutes");
 
 // Import error handler
 const ExpressError = require("./utils/expressError");
@@ -50,6 +51,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/applications", applicationRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/eta", etaRoutes);
+app.use("/api/chat", chatRoutes);
 
 // 404 handler
 app.use((req, res, next) => {

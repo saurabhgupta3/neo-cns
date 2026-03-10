@@ -1,6 +1,7 @@
 import { Outlet } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import Chatbot from "../components/Chatbot";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./Layout.css";
@@ -20,7 +21,8 @@ export default function Layout() {
             <main className="content">
                 <Outlet></Outlet>
             </main>
-            
+
+            <Chatbot />
             <Footer></Footer>
         </div>
     )
