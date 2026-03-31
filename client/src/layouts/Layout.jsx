@@ -14,16 +14,17 @@ export default function Layout() {
                 autoClose={3000}
                 pauseOnHover
                 closeOnClick
+                theme="dark"
             />
-            <Navbar></Navbar>
-            <h1>Courier Network System</h1>
-            <hr />
+            <Navbar />
+            <div className="page-hero">
+                <h1>Courier Network System</h1>
+            </div>
             <main className="content">
-                <Outlet></Outlet>
+                <Outlet />
             </main>
-
             <Chatbot />
-            <Footer></Footer>
+            <Footer />
         </div>
     )
 }

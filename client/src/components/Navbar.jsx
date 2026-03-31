@@ -16,7 +16,7 @@ export default function Navbar() {
     };
 
     return (
-        <nav className="navbar navbar-expand-md bg-body-light border-bottom sticky-top">
+        <nav className="navbar navbar-expand-md sticky-top" data-bs-theme="dark">
             <div className="container-fluid">
                 <Link className="navbar-brand" to="/">
                     <FontAwesomeIcon icon={faTruckMoving} className="truck-icon" />

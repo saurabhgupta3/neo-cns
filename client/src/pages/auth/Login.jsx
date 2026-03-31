@@ -52,7 +52,7 @@ export default function Login() {
         <div className="auth-container">
             <div className="auth-card">
                 <div className="auth-header">
-                    <FontAwesomeIcon icon={faTruckMoving} size="2x" className="mb-3" style={{ color: "#667eea" }} />
+                    <FontAwesomeIcon icon={faTruckMoving} size="2x" className="mb-3" style={{ color: "var(--accent-primary-light)" }} />
                     <h2>Welcome Back!</h2>
                     <p>Sign in to your Neo-CNS account</p>
                 </div>

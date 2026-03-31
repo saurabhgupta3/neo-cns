@@ -1,24 +1,62 @@
-.f-info-links a {
-    text-decoration: none;
-    color: #222222;
-}
-.f-info-links a:hover {
-    text-decoration: underline;
+/* ===== Footer ===== */
 
+footer {
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-subtle);
+  margin-top: auto;
 }
-.f-info-links {
-    width: 100%;
-}
-.f-info-socials {
-    width: 100%;
-    font-size: 1.5rem;
-}
+
 .f-info {
-    display: flex;
-    text-align: center;
-    height: 8rem;
-    flex-wrap: wrap;
-    justify-content: center;
-    align-items: center;
-    background-color: #ebebeb;
+  display: flex;
+  text-align: center;
+  min-height: 5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  padding: 1.5rem 1rem;
+  gap: 0.5rem;
+}
+
+.f-info-socials {
+  width: 100%;
+  font-size: 1.3rem;
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  color: var(--text-muted);
+}
+
+.f-info-socials svg {
+  transition: all var(--transition-normal);
+  cursor: pointer;
+}
+
+.f-info-socials svg:hover {
+  color: var(--accent-primary-light);
+  transform: translateY(-2px);
+}
+
+.f-info > div:nth-child(2) {
+  width: 100%;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.f-info-links {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+}
+
+.f-info-links a {
+  text-decoration: none;
+  color: var(--text-muted);
+  font-size: 0.825rem;
+  transition: color var(--transition-fast);
+}
+
+.f-info-links a:hover {
+  color: var(--accent-primary-light);
+  text-decoration: none;
 }

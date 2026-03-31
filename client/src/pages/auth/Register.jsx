@@ -72,7 +72,7 @@ export default function Register() {
         <div className="auth-container">
             <div className="auth-card" style={{ maxWidth: "480px" }}>
                 <div className="auth-header">
-                    <FontAwesomeIcon icon={faTruckMoving} size="2x" className="mb-3" style={{ color: "#667eea" }} />
+                    <FontAwesomeIcon icon={faTruckMoving} size="2x" className="mb-3" style={{ color: "var(--accent-primary-light)" }} />
                     <h2>Create Account</h2>
                     <p>Join Neo-CNS and start shipping</p>
                 </div>

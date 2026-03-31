@@ -3,6 +3,8 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { getAdjustedETA } from "../../utils/etaHelper";
 import { toast } from "react-toastify";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faArrowLeft, faEdit, faTrash, faHistory } from "@fortawesome/free-solid-svg-icons";
 import "./Orders.css";
 
 export default function OrderDetails() {
@@ -63,10 +65,9 @@ export default function OrderDetails() {
 
     if (loading) {
         return (
-            <div className="text-center py-5">
-                <div className="spinner-border text-primary" role="status">
-                    <span className="visually-hidden">Loading...</span>
-                </div>
+            <div className="orders-loading">
+                <div className="loading-spinner"></div>
+                <p>Loading order details...</p>
             </div>
         );
     }
@@ -79,189 +80,176 @@ export default function OrderDetails() {
         );
     }
 
+    const eta = getAdjustedETA(order.etaMinutes, order.status);
+    const statusClass = order.status.toLowerCase().replace(/\s+/g, '-');
+
     return (
-        <div className="container py-4">
-            <div className="row">
-                <div className="col-lg-8 offset-lg-2">
-                    <div className="d-flex justify-content-between align-items-center mb-4">
-                        <h2>Order Details</h2>
-                        <Link to="/orders" className="btn btn-outline-secondary">
-                            ← Back to Orders
-                        </Link>
-                    </div>
-
-                    <div className="card shadow-sm">
-                        <div className="row g-0">
-                            <div className="col-md-5">
-                                <img
-                                    className="img-fluid rounded-start h-100"
-                                    src={order.image}
-                                    alt="order"
-                                    style={{ objectFit: "cover" }}
-                                    onError={(e) => {
-                                        e.target.onerror = null;
-                                        e.target.src = "https://res.cloudinary.com/dfq3xkwrk/image/upload/v1762187021/ChatGPT_Image_Nov_3_2025_09_51_44_PM_ausbho.png";
-                                    }}
-                                />
-                            </div>
-                            <div className="col-md-7">
-                                <div className="card-body">
-                                    <h5 className="card-title">
-                                        {order.senderName} <span className="text-muted">→</span> {order.receiverName}
-                                    </h5>
-
-                                    <span className={`badge ${getStatusColor(order.status)} mb-3`}>
-                                        {order.status}
-                                    </span>
-
-                                    <table className="table table-borderless">
-                                        <tbody>
-                                            <tr>
-                                                <td><strong>Price:</strong></td>
-                                                <td>&#8377;{order.price?.toLocaleString("en-IN")}</td>
-                                            </tr>
-                                            <tr>
-                                                <td><strong>Weight:</strong></td>
-                                                <td>{order.weight} kg</td>
-                                            </tr>
-                                            <tr>
-                                                <td><strong>Distance:</strong></td>
-                                                <td>{order.distance} km</td>
-                                            </tr>
-                                            {(() => {
-                                                const eta = getAdjustedETA(order.etaMinutes, order.status);
-                                                return eta ? (
-                                                    <tr>
-                                                        <td><strong>{eta.label}:</strong></td>
-                                                        <td>{eta.formatted}</td>
-                                                    </tr>
-                                                ) : order.status === "Delivered" ? (
-                                                    <tr>
-                                                        <td><strong>Status:</strong></td>
-                                                        <td className="text-success fw-bold">Delivered ✅</td>
-                                                    </tr>
-                                                ) : null;
-                                            })()}
-                                            {order.estimatedDeliveryTime && order.status !== "Delivered" && order.status !== "Cancelled" && (
-                                                <tr>
-                                                    <td><strong>Expected By:</strong></td>
-                                                    <td>{new Date(order.estimatedDeliveryTime).toLocaleString()}</td>
-                                                </tr>
-                                            )}
-                                            {order.riskScore !== undefined && order.riskScore !== null && (
-                                                <tr>
-                                                    <td><strong>Fraud Risk:</strong></td>
-                                                    <td>
-                                                        {(() => {
-                                                            const score = order.riskScore;
-                                                            const level = score >= 0.6 ? 'high' : score >= 0.3 ? 'medium' : 'low';
-                                                            const badgeClass = level === 'high' ? 'bg-danger' : level === 'medium' ? 'bg-warning text-dark' : 'bg-success';
-                                                            const icon = level === 'high' ? '🔴' : level === 'medium' ? '🟡' : '🟢';
-                                                            return (
-                                                                <>
-                                                                    <span className={`badge ${badgeClass}`}>
-                                                                        {icon} {level.toUpperCase()} ({(score * 100).toFixed(0)}%)
-                                                                    </span>
-                                                                    {order.fraudFlags?.length > 0 && (
-                                                                        <ul className="mb-0 mt-1 small text-muted">
-                                                                            {order.fraudFlags.map((flag, i) => (
-                                                                                <li key={i}>⚠️ {flag}</li>
-                                                                            ))}
-                                                                        </ul>
-                                                                    )}
-                                                                </>
-                                                            );
-                                                        })()}
-                                                    </td>
-                                                </tr>
-                                            )}
-                                            <tr>
-                                                <td><strong>Pickup:</strong></td>
-                                                <td>{order.pickupAddress}</td>
-                                            </tr>
-                                            <tr>
-                                                <td><strong>Delivery:</strong></td>
-                                                <td>{order.deliveryAddress}</td>
-                                            </tr>
-                                            {order.user && (
-                                                <tr>
-                                                    <td><strong>Created By:</strong></td>
-                                                    <td>{order.user.name} ({order.user.email})</td>
-                                                </tr>
-                                            )}
-                                            {order.courier && (
-                                                <tr>
-                                                    <td><strong>Courier:</strong></td>
-                                                    <td>{order.courier.name}</td>
-                                                </tr>
-                                            )}
-                                        </tbody>
-                                    </table>
-
-                                    <div className="d-flex gap-2 mt-3">
-                                        {/* Only show edit if order is pending or user is admin */}
-                                        {(order.status === "Pending" || user?.role === "admin") && (
-                                            <Link to={`/orders/${id}/edit`} className="btn btn-primary">
-                                                Edit Order
-                                            </Link>
-                                        )}
-
-                                        {/* Only show delete if order is pending or user is admin */}
-                                        {(order.status === "Pending" || user?.role === "admin") && (
-                                            <button
-                                                onClick={handleDelete}
-                                                className="btn btn-danger"
-                                                disabled={deleting}
-                                            >
-                                                {deleting ? "Deleting..." : "Delete Order"}
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Status History */}
-                    {order.statusHistory && order.statusHistory.length > 0 && (
-                        <div className="card mt-4 shadow-sm">
-                            <div className="card-header">
-                                <h5 className="mb-0">Status History</h5>
-                            </div>
-                            <div className="card-body">
-                                <ul className="list-group list-group-flush">
-                                    {order.statusHistory.map((history, index) => (
-                                        <li key={index} className="list-group-item d-flex justify-content-between">
-                                            <span>
-                                                <span className={`badge ${getStatusColor(history.status)} me-2`}>
-                                                    {history.status}
-                                                </span>
-                                                {history.note}
-                                            </span>
-                                            <small className="text-muted">
-                                                {new Date(history.timestamp).toLocaleString()}
-                                            </small>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-                        </div>
-                    )}
-                </div>
+        <div className="order-form-container">
+            <div className="order-form-header">
+                <h3>Order Details</h3>
+                <Link to="/orders" className="btn btn-outline-secondary">
+                    <FontAwesomeIcon icon={faArrowLeft} className="me-2" />
+                    Back to Orders
+                </Link>
             </div>
+
+            <div className="order-detail-card">
+                <div className="order-detail-header">
+                    <div className="order-detail-route">
+                        <div className="route-visual">
+                            <div className="dot-from"></div>
+                            <div className="route-arrow"></div>
+                            <div className="dot-to"></div>
+                        </div>
+                        <div className="order-detail-names">
+                            <h3>{order.senderName} → {order.receiverName}</h3>
+                        </div>
+                    </div>
+                    <span className={`status-pill ${statusClass}`} style={{ fontSize: '0.85rem' }}>
+                        {order.status}
+                    </span>
+                </div>
+
+                <div className="order-detail-body">
+                    <div className="detail-grid">
+                        <div className="detail-item">
+                            <span className="detail-item-label">Price</span>
+                            <span className="detail-item-value price">
+                                &#8377;{order.price?.toLocaleString("en-IN")}
+                            </span>
+                        </div>
+                        <div className="detail-item">
+                            <span className="detail-item-label">Weight</span>
+                            <span className="detail-item-value">{order.weight} kg</span>
+                        </div>
+                        <div className="detail-item">
+                            <span className="detail-item-label">Distance</span>
+                            <span className="detail-item-value">{order.distance} km</span>
+                        </div>
+
+                        {eta ? (
+                            <div className="detail-item">
+                                <span className="detail-item-label">{eta.label}</span>
+                                <span className="detail-item-value">{eta.formatted}</span>
+                            </div>
+                        ) : order.status === "Delivered" ? (
+                            <div className="detail-item">
+                                <span className="detail-item-label">Status</span>
+                                <span className="detail-item-value" style={{ color: '#34d399' }}>
+                                    Delivered ✅
+                                </span>
+                            </div>
+                        ) : null}
+
+                        {order.estimatedDeliveryTime && order.status !== "Delivered" && order.status !== "Cancelled" && (
+                            <div className="detail-item">
+                                <span className="detail-item-label">Expected By</span>
+                                <span className="detail-item-value">
+                                    {new Date(order.estimatedDeliveryTime).toLocaleString()}
+                                </span>
+                            </div>
+                        )}
+
+                        {order.riskScore !== undefined && order.riskScore !== null && (
+                            <div className="detail-item">
+                                <span className="detail-item-label">Fraud Risk</span>
+                                <span className="detail-item-value">
+                                    {(() => {
+                                        const score = order.riskScore;
+                                        const level = score >= 0.6 ? 'high' : score >= 0.3 ? 'medium' : 'low';
+                                        const icon = level === 'high' ? '🔴' : level === 'medium' ? '🟡' : '🟢';
+                                        return (
+                                            <>
+                                                <span className={`status-pill ${level === 'high' ? 'cancelled' : level === 'medium' ? 'pending' : 'delivered'}`}>
+                                                    {icon} {level.toUpperCase()} ({(score * 100).toFixed(0)}%)
+                                                </span>
+                                                {order.fraudFlags?.length > 0 && (
+                                                    <ul className="fraud-flags">
+                                                        {order.fraudFlags.map((flag, i) => (
+                                                            <li key={i}>⚠️ {flag}</li>
+                                                        ))}
+                                                    </ul>
+                                                )}
+                                            </>
+                                        );
+                                    })()}
+                                </span>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="detail-grid" style={{ marginTop: '1rem' }}>
+                        <div className="detail-item">
+                            <span className="detail-item-label">Pickup Address</span>
+                            <span className="detail-item-value">{order.pickupAddress}</span>
+                        </div>
+                        <div className="detail-item">
+                            <span className="detail-item-label">Delivery Address</span>
+                            <span className="detail-item-value">{order.deliveryAddress}</span>
+                        </div>
+                        {order.user && (
+                            <div className="detail-item">
+                                <span className="detail-item-label">Created By</span>
+                                <span className="detail-item-value">
+                                    {order.user.name} ({order.user.email})
+                                </span>
+                            </div>
+                        )}
+                        {order.courier && (
+                            <div className="detail-item">
+                                <span className="detail-item-label">Courier</span>
+                                <span className="detail-item-value">{order.courier.name}</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {(order.status === "Pending" || user?.role === "admin") && (
+                    <div className="order-detail-actions">
+                        <Link to={`/orders/${id}/edit`} className="btn btn-primary">
+                            <FontAwesomeIcon icon={faEdit} className="me-2" />
+                            Edit Order
+                        </Link>
+                        <button
+                            onClick={handleDelete}
+                            className="btn btn-danger"
+                            disabled={deleting}
+                        >
+                            <FontAwesomeIcon icon={faTrash} className="me-2" />
+                            {deleting ? "Deleting..." : "Delete Order"}
+                        </button>
+                    </div>
+                )}
+            </div>
+
+            {order.statusHistory && order.statusHistory.length > 0 && (
+                <div className="status-history-card">
+                    <div className="status-history-header">
+                        <FontAwesomeIcon icon={faHistory} />
+                        Status History
+                    </div>
+                    <ul className="status-history-list">
+                        {order.statusHistory.map((history, index) => {
+                            const historyStatusClass = history.status.toLowerCase().replace(/\s+/g, '-');
+                            return (
+                                <li key={index} className="status-history-item">
+                                    <span>
+                                        <span className={`status-pill ${historyStatusClass}`}>
+                                            {history.status}
+                                        </span>
+                                        {history.note && (
+                                            <span className="note">{history.note}</span>
+                                        )}
+                                    </span>
+                                    <span className="timestamp">
+                                        {new Date(history.timestamp).toLocaleString()}
+                                    </span>
+                                </li>
+                            );
+                        })}
+                    </ul>
+                </div>
+            )}
         </div>
     );
-}
-
-function getStatusColor(status) {
-    const colors = {
-        "Pending": "bg-warning text-dark",
-        "Confirmed": "bg-info",
-        "Picked Up": "bg-primary",
-        "In Transit": "bg-primary",
-        "Out for Delivery": "bg-info",
-        "Delivered": "bg-success",
-        "Cancelled": "bg-danger"
-    };
-    return colors[status] || "bg-secondary";
 }

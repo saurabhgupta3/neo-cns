@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Link } from 'react-router-dom';
 import { useAuth } from "../../context/AuthContext";
 import { getAdjustedETA } from "../../utils/etaHelper";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faPlus, faBoxOpen } from "@fortawesome/free-solid-svg-icons";
 import "./Orders.css";
 
 export default function OrdersList() {
@@ -35,11 +37,9 @@ export default function OrdersList() {
 
     if (loading) {
         return (
-            <div className="content text-center py-5">
-                <div className="spinner-border text-primary" role="status">
-                    <span className="visually-hidden">Loading...</span>
-                </div>
-                <p className="mt-3">Loading orders...</p>
+            <div className="orders-loading">
+                <div className="loading-spinner"></div>
+                <p>Loading orders...</p>
             </div>
         );
     }
@@ -55,63 +55,81 @@ export default function OrdersList() {
     }
 
     return (
-        <div className="content">
-            <div className="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <div className="orders-page-header">
                 <h2>{user?.role === "courier" ? "My Assigned Orders" : "All Orders"}</h2>
                 {user?.role !== "courier" && (
                     <Link to="/orders/new" className="btn btn-primary">
-                        + New Order
+                        <FontAwesomeIcon icon={faPlus} className="me-2" />
+                        New Order
                     </Link>
                 )}
             </div>
 
             {orders.length === 0 ? (
-                <div className="text-center py-5">
-                    <p className="text-muted">
+                <div className="orders-empty">
+                    <div className="orders-empty-icon">
+                        <FontAwesomeIcon icon={faBoxOpen} />
+                    </div>
+                    <h4>
                         {user?.role === "courier"
-                            ? "No orders assigned to you yet."
-                            : "No orders found. Create your first order!"}
+                            ? "No orders assigned to you yet"
+                            : "No orders found"}
+                    </h4>
+                    <p>
+                        {user?.role === "courier"
+                            ? "Check back later for new delivery assignments."
+                            : "Create your first order to get started."}
                     </p>
                     {user?.role !== "courier" && (
                         <Link to="/orders/new" className="btn btn-primary">
+                            <FontAwesomeIcon icon={faPlus} className="me-2" />
                             Create Order
                         </Link>
                     )}
                 </div>
             ) : (
-                <div className="row row-cols-lg-3 row-cols-md-2 row-cols-sm-1 g-4">
+                <div className="orders-grid">
                     {orders.map((order) => {
                         const eta = getAdjustedETA(order.etaMinutes, order.status);
+                        const statusClass = order.status.toLowerCase().replace(/\s+/g, '-');
                         return (
                             <Link to={`/orders/${order._id}`} key={order._id} className="order-show-link">
-                                <div className="card col h-100">
-                                    <img
-                                        src={order.image}
-                                        alt="order"
-                                        className="card-img-top"
-                                        style={{ height: "20rem", objectFit: "cover" }}
-                                        onError={(e) => {
-                                            e.target.onerror = null;
-                                            e.target.src = "https://res.cloudinary.com/dfq3xkwrk/image/upload/v1762187021/ChatGPT_Image_Nov_3_2025_09_51_44_PM_ausbho.png";
-                                        }}
-                                    />
-                                    <div className="card-img-overlay"></div>
-                                    <div className="card-body">
-                                        <p className="card-text">
-                                            <b>{order.senderName} <span className="text-muted">→</span> {order.receiverName}</b>
-                                            <br />
-                                            <span className={`badge ${getStatusColor(order.status)}`}>{order.status}</span>
-                                            {eta && (
-                                                <span className="badge bg-dark ms-1" title={eta.label}>
-                                                    🕐 {eta.formatted}
-                                                </span>
-                                            )}
-                                            <br />
+                                <div className="order-card">
+                                    <div className="order-card-header">
+                                        <div className="order-card-route">
+                                            <div className="route-icon">
+                                                <div className="route-dot"></div>
+                                                <div className="route-line"></div>
+                                                <div className="route-dot-end"></div>
+                                            </div>
+                                            <div className="order-card-names">
+                                                <span className="sender">{order.senderName}</span>
+                                                <span className="receiver">{order.receiverName}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="order-card-meta">
+                                        <span className={`status-pill ${statusClass}`}>
+                                            {order.status}
+                                        </span>
+                                        {eta && (
+                                            <span className="eta-badge" title={eta.label}>
+                                                🕐 {eta.formatted}
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    <div className="order-card-footer">
+                                        <span className="order-price">
                                             &#8377;{order.price?.toLocaleString("en-IN")}
-                                            {order.distance && (
-                                                <span className="text-muted ms-2">• {order.distance} km</span>
-                                            )}
-                                        </p>
+                                        </span>
+                                        {order.distance && (
+                                            <span className="order-distance">
+                                                {order.distance} km
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                             </Link>
@@ -121,18 +139,4 @@ export default function OrdersList() {
             )}
         </div>
     );
-}
-
-// Helper function to get status badge color
-function getStatusColor(status) {
-    const colors = {
-        "Pending": "bg-warning text-dark",
-        "Confirmed": "bg-info",
-        "Picked Up": "bg-primary",
-        "In Transit": "bg-primary",
-        "Out for Delivery": "bg-info",
-        "Delivered": "bg-success",
-        "Cancelled": "bg-danger"
-    };
-    return colors[status] || "bg-secondary";
 }
