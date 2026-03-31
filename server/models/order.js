@@ -114,7 +114,7 @@ const orderSchema = new Schema({
     },
     etaMethod: {
         type: String,
-        enum: ['ml_prediction', 'fallback_formula', null],
+        enum: ['ml_prediction', 'fallback_formula', 'distance_formula', null],
         default: null
     },
     // Fraud detection fields

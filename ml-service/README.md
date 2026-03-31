@@ -11,15 +11,17 @@ Machine Learning service for predicting delivery ETA in the Neo-CNS courier syst
 
 ### 1. Create Virtual Environment (Recommended)
 
+The virtual environment is stored externally at `D:/code/Projects/ml-venv` to keep the project size small.
+
 ```bash
-cd ml-service
-python -m venv venv
+# Create venv (if not already created)
+python -m venv D:/code/Projects/ml-venv
 
-# Windows
-venv\Scripts\activate
+# Windows - Activate
+D:\code\Projects\ml-venv\Scripts\activate
 
-# Linux/Mac
-source venv/bin/activate
+# Linux/Mac - Activate
+source D:/code/Projects/ml-venv/bin/activate
 ```
 
 ### 2. Install Dependencies
@@ -32,7 +34,9 @@ pip install -r requirements.txt
 
 1. Go to: https://www.kaggle.com/datasets/gauravmalik26/food-delivery-dataset
 2. Download `deliverytime.csv`
-3. Place it in `ml-service/data/deliverytime.csv`
+3. Place it in `D:/code/Projects/ml-data/deliverytime.csv`
+
+> **Note:** Training data is stored externally at `D:/code/Projects/ml-data/` to keep the project size small.
 
 ### 4. Train the Model
 
@@ -118,12 +122,16 @@ Response:
 ml-service/
 ├── app.py               # Flask API server
 ├── train_model.py       # Model training script
+├── train_fraud_model.py # Fraud model training script
 ├── requirements.txt     # Python dependencies
 ├── README.md           # This file
-├── data/
-│   └── deliverytime.csv # Training data (download from Kaggle)
 └── models/
-    └── eta_model.pkl    # Trained model
+    ├── eta_model.pkl    # Trained ETA model
+    └── fraud_model.pkl  # Trained fraud model
+
+# External directories (outside project to reduce size):
+D:/code/Projects/ml-data/        # Training datasets (.csv files)
+D:/code/Projects/ml-venv/        # Python virtual environment
 ```
 
 ## 🔧 Environment Variables
@@ -149,3 +157,5 @@ curl -X POST http://localhost:5000/predict/eta \
 - The service falls back to a formula-based calculation if the ML model is not trained
 - Model needs to be retrained periodically with new data for better accuracy
 - Traffic level: 1=Low, 2=Medium, 3=High, 4=Jam
+- Training data is stored at `D:/code/Projects/ml-data/` (outside the project)
+- Virtual environment is stored at `D:/code/Projects/ml-venv/` (outside the project)

@@ -158,6 +158,11 @@ const createOrder = async (req, res, next) => {
 
 // Helper function to format ETA
 function formatETA(minutes) {
+    if (minutes >= 1440) {
+        const days = Math.floor(minutes / 1440);
+        const hours = Math.floor((minutes % 1440) / 60);
+        return hours > 0 ? `${days}d ${hours}h` : `${days}d`;
+    }
     if (minutes >= 60) {
         const hours = Math.floor(minutes / 60);
         const mins = minutes % 60;

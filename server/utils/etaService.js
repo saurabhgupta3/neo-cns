@@ -81,18 +81,46 @@ async function predictETA(params) {
 }
 
 /**
- * Fallback ETA calculation when ML service is unavailable
+ * Fallback ETA calculation when ML service is unavailable.
+ * Uses distance-aware speed assumptions:
+ * - Short (≤ 20 km): city delivery at ~25 km/h
+ * - Medium (20-100 km): mixed city/highway at ~40 km/h
+ * - Long (100-500 km): highway at ~55 km/h + rest stops
+ * - Very long (> 500 km): highway + overnight rest stops
  */
 function calculateETAFallback(distance, weight, hourOfDay, trafficLevel) {
-    // Base calculation: Average speed 30 km/h in city
-    let etaMinutes = (distance / 30) * 60;
+    let etaMinutes;
+
+    if (distance <= 20) {
+        etaMinutes = (distance / 25) * 60;
+    } else if (distance <= 100) {
+        const cityTime = (20 / 25) * 60;
+        const highwayTime = ((distance - 20) / 40) * 60;
+        etaMinutes = cityTime + highwayTime;
+    } else if (distance <= 500) {
+        const cityTime = (20 / 25) * 60;
+        const highwayTime = ((distance - 20) / 55) * 60;
+        const restStops = Math.floor(distance / 200) * 30;
+        etaMinutes = cityTime + highwayTime + restStops + 30;
+    } else {
+        const cityTime = (20 / 25) * 60;
+        const highwayTime = ((distance - 20) / 55) * 60;
+        const restStops = Math.floor(distance / 200) * 30;
+        const overnightStops = Math.floor(distance / 700) * 480;
+        etaMinutes = cityTime + highwayTime + restStops + overnightStops + 60;
+    }
     
-    // Traffic factor
-    const trafficMultipliers = { 1: 0.8, 2: 1.0, 3: 1.3, 4: 1.6 };
-    etaMinutes *= trafficMultipliers[trafficLevel] || 1.0;
+    // Traffic factor (mainly affects short distances)
+    const trafficMultipliers = { 1: 0.9, 2: 1.0, 3: 1.15, 4: 1.3 };
+    if (distance <= 50) {
+        etaMinutes *= trafficMultipliers[trafficLevel] || 1.0;
+    } else {
+        const cityFactor = trafficMultipliers[trafficLevel] || 1.0;
+        etaMinutes = etaMinutes * 0.3 * cityFactor + etaMinutes * 0.7;
+    }
     
-    // Rush hour factor (8-10 AM, 5-8 PM)
-    if ([8, 9, 10, 17, 18, 19, 20].includes(hourOfDay)) {
+    // Rush hour factor (only for short distances)
+    if ([8, 9, 10, 17, 18, 19, 20].includes(hourOfDay) && distance <= 50) {
         etaMinutes *= 1.25;
     }
     
@@ -108,7 +136,11 @@ function calculateETAFallback(distance, weight, hourOfDay, trafficLevel) {
     
     // Format ETA
     let etaFormatted;
-    if (etaMinutes >= 60) {
+    if (etaMinutes >= 1440) {
+        const days = Math.floor(etaMinutes / 1440);
+        const hours = Math.floor((etaMinutes % 1440) / 60);
+        etaFormatted = hours > 0 ? `${days}d ${hours}h` : `${days}d`;
+    } else if (etaMinutes >= 60) {
         const hours = Math.floor(etaMinutes / 60);
         const mins = etaMinutes % 60;
         etaFormatted = mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
@@ -116,12 +148,12 @@ function calculateETAFallback(distance, weight, hourOfDay, trafficLevel) {
         etaFormatted = `${etaMinutes}m`;
     }
     
-    console.log(`📊 Fallback ETA: ${etaFormatted}`);
+    console.log(`📊 Fallback ETA: ${etaFormatted} (${etaMinutes} minutes)`);
     
     return {
         etaMinutes: etaMinutes,
         etaFormatted: etaFormatted,
-        confidence: 0.6,
+        confidence: distance <= 200 ? 0.7 : 0.6,
         method: 'fallback_formula',
         estimatedDeliveryTime: new Date(Date.now() + etaMinutes * 60 * 1000)
     };

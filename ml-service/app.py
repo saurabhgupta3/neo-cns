@@ -71,17 +71,56 @@ def load_fraud_model():
         return False
 
 
+# Maximum distance (km) for which the ML model's predictions are reliable.
+# The model was trained on food delivery data (1-20 km range).
+# Beyond this threshold, we use a formula-based approach.
+ML_MODEL_MAX_RELIABLE_DISTANCE = 50
+
+
 def calculate_fallback_eta(distance, hour_of_day, traffic_level=2):
-    """Fallback ETA calculation when model is not available"""
-    # Base speed: 25 km/h in city
-    base_time = (distance / 25) * 60  # Convert to minutes
+    """
+    Fallback ETA calculation when model is not available or distance
+    is outside the ML model's reliable range.
     
-    # Traffic factor
-    traffic_multiplier = {1: 0.8, 2: 1.0, 3: 1.3, 4: 1.6}
-    base_time *= traffic_multiplier.get(traffic_level, 1.0)
+    Uses different speed assumptions based on distance:
+    - Short distance (≤ 20 km): city delivery at ~25 km/h
+    - Medium distance (20-100 km): mixed city/highway at ~40 km/h
+    - Long distance (100-500 km): mostly highway at ~55 km/h + rest stops
+    - Very long distance (> 500 km): highway at ~55 km/h + overnight/rest stops
+    """
+    if distance <= 20:
+        # City delivery
+        base_time = (distance / 25) * 60
+    elif distance <= 100:
+        # City exit + suburban/highway
+        city_time = (20 / 25) * 60  # First 20 km in city
+        highway_time = ((distance - 20) / 40) * 60
+        base_time = city_time + highway_time
+    elif distance <= 500:
+        # Long distance - highway speed with pickup/drop overhead
+        city_time = (20 / 25) * 60  # City portions
+        highway_time = ((distance - 20) / 55) * 60
+        rest_stops = (distance // 200) * 30  # 30 min rest every 200 km
+        base_time = city_time + highway_time + rest_stops + 30  # +30 min for loading/unloading
+    else:
+        # Very long distance (inter-state)
+        city_time = (20 / 25) * 60
+        highway_time = ((distance - 20) / 55) * 60
+        rest_stops = (distance // 200) * 30
+        overnight_stops = (distance // 700) * 480  # 8 hour overnight stop every 700 km
+        base_time = city_time + highway_time + rest_stops + overnight_stops + 60  # +60 min handling
     
-    # Rush hour factor
-    if hour_of_day in [8, 9, 10, 17, 18, 19, 20]:
+    # Traffic factor (mainly affects city portion)
+    traffic_multiplier = {1: 0.9, 2: 1.0, 3: 1.15, 4: 1.3}
+    if distance <= 50:
+        base_time *= traffic_multiplier.get(traffic_level, 1.0)
+    else:
+        # Traffic has less impact on long-distance (mostly highway)
+        city_factor = traffic_multiplier.get(traffic_level, 1.0)
+        base_time = base_time * 0.3 * city_factor + base_time * 0.7  # 30% city, 70% highway
+    
+    # Rush hour factor (only significant for short distances)
+    if hour_of_day in [8, 9, 10, 17, 18, 19, 20] and distance <= 50:
         base_time *= 1.2
     
     # Minimum 15 minutes for any delivery
@@ -177,7 +216,8 @@ def predict_eta():
         is_rush_hour = 1 if hour_of_day in [8, 9, 10, 17, 18, 19, 20] else 0
         
         # Use ML model if available
-        if model is not None:
+        # Check if distance is within ML model's reliable range
+        if model is not None and distance <= ML_MODEL_MAX_RELIABLE_DISTANCE:
             try:
                 # Build feature vector based on available features
                 feature_values = []
@@ -201,8 +241,8 @@ def predict_eta():
                 features = np.array([feature_values])
                 eta_minutes = model.predict(features)[0]
                 
-                # Ensure reasonable bounds
-                eta_minutes = max(10, min(eta_minutes, 480))  # 10 min to 8 hours
+                # Ensure reasonable bounds (10 min to 3 hours for short distances)
+                eta_minutes = max(10, min(eta_minutes, 180))
                 
                 # Calculate confidence based on feature availability
                 confidence = 0.85
@@ -215,14 +255,24 @@ def predict_eta():
                 confidence = 0.6
                 method = 'fallback_formula'
         else:
-            # Fallback to formula
+            # Distance is outside ML model's training range, or model not loaded
+            # Use distance-aware formula for reliable long-distance ETAs
+            if distance > ML_MODEL_MAX_RELIABLE_DISTANCE:
+                print(f"📏 Distance {distance:.1f} km exceeds ML model range ({ML_MODEL_MAX_RELIABLE_DISTANCE} km), using formula")
             eta_minutes = calculate_fallback_eta(distance, hour_of_day, traffic_level)
-            confidence = 0.6
-            method = 'fallback_formula'
+            confidence = 0.7 if distance <= 200 else 0.6
+            method = 'distance_formula'
         
         # Format ETA
         eta_minutes = round(eta_minutes)
-        if eta_minutes >= 60:
+        if eta_minutes >= 1440:  # 24 hours
+            days = eta_minutes // 1440
+            remaining_hours = (eta_minutes % 1440) // 60
+            if remaining_hours > 0:
+                eta_formatted = f"{days}d {remaining_hours}h"
+            else:
+                eta_formatted = f"{days}d"
+        elif eta_minutes >= 60:
             hours = eta_minutes // 60
             mins = eta_minutes % 60
             if mins > 0:

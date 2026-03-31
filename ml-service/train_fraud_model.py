@@ -19,7 +19,7 @@ Target:
     - isFraud (0 or 1)
 
 Usage:
-    1. Download dataset from Kaggle and place in ml-service/data/onlinefraud.csv
+    1. Download dataset from Kaggle and place in D:/code/Projects/ml-data/onlinefraud.csv
     2. Run: python train_fraud_model.py
 """
 
@@ -35,7 +35,7 @@ import warnings
 warnings.filterwarnings('ignore')
 
 # Paths
-DATA_PATH = 'data/onlinefraud.csv'
+DATA_PATH = 'D:/code/Projects/ml-data/onlinefraud.csv'
 MODEL_PATH = 'models/fraud_model.pkl'
 
 
@@ -51,7 +51,7 @@ def load_and_prepare_data():
         print(f"\n📥 To download the dataset:")
         print(f"   1. Go to: https://www.kaggle.com/datasets/rupakroy/online-payments-fraud-detection-dataset")
         print(f"   2. Download 'onlinefraud.csv'")
-        print(f"   3. Place it in: ml-service/data/onlinefraud.csv")
+        print(f"   3. Place it in: D:/code/Projects/ml-data/onlinefraud.csv")
         return None, None, None
     
     # Load dataset

@@ -8,7 +8,7 @@ Source: https://www.kaggle.com/datasets/gauravmalik26/food-delivery-dataset
 
 Usage:
     1. Download the dataset from Kaggle
-    2. Place 'deliverytime.csv' in the 'data/' folder
+    2. Place 'deliverytime.csv' in 'D:/code/Projects/ml-data/'
     3. Run: python train_model.py
 """
 
@@ -24,7 +24,7 @@ import warnings
 warnings.filterwarnings('ignore')
 
 # Paths
-DATA_PATH = 'data/deliverytime.csv'
+DATA_PATH = 'D:/code/Projects/ml-data/deliverytime.csv'
 MODEL_PATH = 'models/eta_model.pkl'
 ENCODERS_PATH = 'models/encoders.pkl'
 
@@ -36,7 +36,7 @@ def load_and_prepare_data():
     if not os.path.exists(DATA_PATH):
         print(f"❌ Dataset not found at {DATA_PATH}")
         print("📥 Please download from: https://www.kaggle.com/datasets/gauravmalik26/food-delivery-dataset")
-        print("   Place 'deliverytime.csv' in the 'data/' folder")
+        print("   Place 'deliverytime.csv' in 'D:/code/Projects/ml-data/'")
         return None, None, None
     
     df = pd.read_csv(DATA_PATH)
