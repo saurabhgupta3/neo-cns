@@ -12,7 +12,8 @@ CORS(app)
 
 # config paths
 MODEL_PATH = 'models/eta_model.pkl'
-FRAUD_MODEL_PATH = 'models/fraud_model.pkl'
+# Neo-CNS courier fraud (trained on data/courier_fraud_combined.csv via train_courier_fraud_model.py)
+COURIER_FRAUD_MODEL_PATH = 'models/courier_fraud_model.pkl'
 PORT = int(os.environ.get('ML_SERVICE_PORT', 5001))
 
 # eta model
@@ -20,10 +21,11 @@ model_data = None
 model = None
 feature_names = None
 
-# fraud model
-fraud_model_data = None
-fraud_model = None
-fraud_feature_names = None
+# courier fraud model (legacy fraud_model.pkl is unused — not deleted from disk)
+courier_fraud_model_data = None
+courier_fraud_model = None
+courier_fraud_feature_names = None
+courier_fraud_train_mean_price = None
 
 def load_model():
     """Load ETA model"""
@@ -41,21 +43,110 @@ def load_model():
         print("   Run 'python train_model.py' first to train the model")
         return False
 
-def load_fraud_model():
-    """Load fraud model"""
-    global fraud_model_data, fraud_model, fraud_feature_names
-    
-    if os.path.exists(FRAUD_MODEL_PATH):
-        fraud_model_data = joblib.load(FRAUD_MODEL_PATH)
-        fraud_model = fraud_model_data['model']
-        fraud_feature_names = fraud_model_data['feature_names']
-        print(f"✅ Fraud Model loaded from {FRAUD_MODEL_PATH}")
-        print(f"   Features: {fraud_feature_names}")
+def load_courier_fraud_model():
+    """Load Neo-CNS courier fraud model (combined synthetic + real-mapped CSV)."""
+    global courier_fraud_model_data, courier_fraud_model, courier_fraud_feature_names
+    global courier_fraud_train_mean_price
+
+    if os.path.exists(COURIER_FRAUD_MODEL_PATH):
+        courier_fraud_model_data = joblib.load(COURIER_FRAUD_MODEL_PATH)
+        courier_fraud_model = courier_fraud_model_data['model']
+        courier_fraud_feature_names = courier_fraud_model_data['feature_names']
+        courier_fraud_train_mean_price = float(
+            courier_fraud_model_data.get('train_mean_price', 500.0)
+        )
+        print(f"✅ Courier fraud model loaded from {COURIER_FRAUD_MODEL_PATH}")
+        print(f"   Features: {courier_fraud_feature_names}")
+        print(f"   train_mean_price: {courier_fraud_train_mean_price:.2f}")
         return True
-    else:
-        print(f"⚠️ Fraud Model not found at {FRAUD_MODEL_PATH}")
-        print("   Run 'python train_fraud_model.py' first to train the model")
-        return False
+    print(f"⚠️ Courier fraud model not found at {COURIER_FRAUD_MODEL_PATH}")
+    print("   Run: python train_courier_fraud_model.py")
+    return False
+
+
+def build_courier_fraud_features(amount, payment_type, hour, distance_km, weight_kg, mean_price):
+    """Feature vector aligned with train_courier_fraud_model.py."""
+    payment_mapping = {'COD': 0, 'Prepaid': 1, 'Wallet': 2}
+    pe = payment_mapping.get(payment_type, 0)
+    mp = max(float(mean_price), 1.0)
+    price = float(amount)
+    hr = int(hour) % 24
+    ratio = price / mp
+    high = 1 if price > 2.0 * mp else 0
+    unusual = 1 if 0 <= hr <= 5 else 0
+    return np.array([[
+        float(distance_km),
+        float(weight_kg),
+        price,
+        pe,
+        hr,
+        ratio,
+        high,
+        unusual,
+    ]])
+
+
+def apply_ood_fraud_boost(distance_km, weight_kg, amount, mean_price, risk_score, fraud_flags):
+    """
+    Training data uses realistic courier ranges. Extreme inputs are OOD; the forest
+    can still output low P(fraud). Boost score when values are implausible for a
+    normal courier order.
+    """
+    mean_price = max(float(mean_price), 1.0)
+    ratio = amount / mean_price
+    ood_reasons = []
+    if weight_kg > 250:
+        ood_reasons.append("Weight far above typical parcel range")
+    if amount > 20000:
+        ood_reasons.append("Quoted price far above normal courier range")
+    if distance_km > 2000:
+        ood_reasons.append("Route length unusually large for a single parcel order")
+    if ratio > 30:
+        ood_reasons.append("Price vastly above typical relative to model baseline")
+
+    if not ood_reasons:
+        return risk_score, fraud_flags
+
+    for r in ood_reasons:
+        if r not in fraud_flags:
+            fraud_flags.append(r)
+    boosted = max(float(risk_score), 0.82)
+    return boosted, fraud_flags
+
+
+def courier_fraud_rule_fallback(amount, payment_type, hour, distance_km, weight_kg, mean_price):
+    """Rule fallback when courier model file missing (courier-aligned)."""
+    payment_mapping = {'COD': 0, 'Prepaid': 1, 'Wallet': 2}
+    pe = payment_mapping.get(payment_type, 0)
+    mp = max(float(mean_price), 1.0)
+    price = float(amount)
+    hr = int(hour) % 24
+    ratio = price / mp
+    high = 1 if price > 2.0 * mp else 0
+    unusual = 1 if 0 <= hr <= 5 else 0
+
+    risk_score = 0.0
+    fraud_flags = []
+    if unusual:
+        risk_score += 0.22
+        fraud_flags.append(f"Unusual hour ({hr}:00)")
+    if high:
+        risk_score += 0.18
+        fraud_flags.append("Price well above training average")
+    if pe == 0 and price > 1200:
+        risk_score += 0.12
+        fraud_flags.append("High-value COD order")
+    if float(distance_km) > 400 and price > 2000:
+        risk_score += 0.1
+        fraud_flags.append("Long-haul high-value order")
+    if float(weight_kg) > 80 and pe == 0:
+        risk_score += 0.08
+        fraud_flags.append("Heavy package on COD")
+    if ratio > 2.5:
+        risk_score += 0.12
+        fraud_flags.append(f"Price {ratio:.1f}x vs typical average")
+    risk_score = min(risk_score, 1.0)
+    return risk_score, fraud_flags
 
 
 # max reliable distance
@@ -110,7 +201,9 @@ def health_check():
     return jsonify({
         'status': 'healthy',
         'eta_model_loaded': model is not None,
-        'fraud_model_loaded': fraud_model is not None,
+        'courier_fraud_model_loaded': courier_fraud_model is not None,
+        # backward-compatible alias (legacy key; now courier model)
+        'fraud_model_loaded': courier_fraud_model is not None,
         'timestamp': datetime.now().isoformat()
     })
 
@@ -264,88 +357,79 @@ def predict_eta():
 
 @app.route('/predict/fraud', methods=['POST'])
 def predict_fraud():
-    """Predict fraud risk"""
+    """Predict courier order fraud risk (Neo-CNS courier model)."""
     try:
         data = request.get_json()
-        
+
         if not data:
             return jsonify({'success': False, 'message': 'No data provided'}), 400
-        
+
         amount = float(data.get('amount', 0))
         payment_type = data.get('payment_type', 'COD')
         hour = int(data.get('hour', datetime.now().hour))
-        
+        distance_km = float(data.get('distance_km', data.get('distance', 0)))
+        weight_kg = float(data.get('weight_kg', data.get('weight', 0)))
+
         if amount <= 0:
             return jsonify({'success': False, 'message': 'Valid amount is required'}), 400
-        
-        # encode payment
-        payment_mapping = {'COD': 0, 'Prepaid': 1, 'Wallet': 2}
-        type_encoded = payment_mapping.get(payment_type, 0)
-        
-        # derived features
-        avg_amount = 180000  # From training data average
-        amount_ratio = amount / avg_amount
-        is_high_amount = 1 if amount > 2 * avg_amount else 0
-        is_unusual_hour = 1 if 0 <= hour <= 5 else 0
-        balance_change_ratio = min(amount / max(amount * 2, 1), 1.0)  # Approximate
-        
-        # feature vector
-        features = np.array([[
-            amount,
-            type_encoded,
-            hour,
-            amount_ratio,
-            is_high_amount,
-            is_unusual_hour,
-            balance_change_ratio
-        ]])
-        
-        # fraud flags
+        if distance_km <= 0 or weight_kg <= 0:
+            return jsonify({
+                'success': False,
+                'message': 'distance_km and weight_kg must be positive'
+            }), 400
+
+        mean_price = courier_fraud_train_mean_price if courier_fraud_train_mean_price else 500.0
+        features = build_courier_fraud_features(
+            amount, payment_type, hour, distance_km, weight_kg, mean_price
+        )
+
         fraud_flags = []
-        if is_unusual_hour:
-            fraud_flags.append(f"Unusual hour ({hour}:00 AM)")
-        if is_high_amount:
-            fraud_flags.append("Unusually high amount")
-        if type_encoded == 0 and amount > 1000:
+        hr = int(hour) % 24
+        if 0 <= hr <= 5:
+            fraud_flags.append(f"Unusual hour ({hr}:00)")
+        if amount > 2.0 * mean_price:
+            fraud_flags.append("Price well above training average")
+        pe = {'COD': 0, 'Prepaid': 1, 'Wallet': 2}.get(payment_type, 0)
+        if pe == 0 and amount > 1200:
             fraud_flags.append("High-value COD order")
-        if amount_ratio > 5:
-            fraud_flags.append(f"Amount {amount_ratio:.1f}x above average")
-        
-        if fraud_model is not None:
-            # ML prediction
-            risk_score = float(fraud_model.predict_proba(features)[0][1])
+        if amount / max(mean_price, 1.0) > 2.5:
+            fraud_flags.append(f"Price {amount / mean_price:.1f}x vs typical average")
+        if distance_km > 400 and amount > 2000:
+            fraud_flags.append("Long-haul high-value order")
+        if weight_kg > 80 and pe == 0:
+            fraud_flags.append("Heavy package on COD")
+
+        if courier_fraud_model is not None:
+            risk_score = float(courier_fraud_model.predict_proba(features)[0][1])
             is_fraud = bool(risk_score > 0.5)
-            method = 'ml_prediction'
-            
-            print(f"\n🚨 Fraud Check (ML): amount={amount}, type={payment_type}, hour={hour}")
-            print(f"   Risk Score: {risk_score:.4f}")
-            print(f"   Flags: {fraud_flags}")
+            method = 'courier_ml_prediction'
+            print(
+                f"\n[Fraud ML] price={amount}, pay={payment_type}, h={hr}, "
+                f"d={distance_km}, w={weight_kg} -> {risk_score:.4f}"
+            )
         else:
-            # rule fallback
-            risk_score = 0.0
-            if is_unusual_hour:
-                risk_score += 0.25
-            if is_high_amount:
-                risk_score += 0.25
-            if type_encoded == 0 and amount > 1000:
-                risk_score += 0.15
-            if amount_ratio > 5:
-                risk_score += 0.2
-            risk_score = min(risk_score, 1.0)
-            is_fraud = risk_score > 0.5
+            risk_score, fb_flags = courier_fraud_rule_fallback(
+                amount, payment_type, hour, distance_km, weight_kg, mean_price
+            )
+            fraud_flags = list(dict.fromkeys(fraud_flags + fb_flags))
+            is_fraud = bool(risk_score > 0.5)
             method = 'rule_based_fallback'
-            
-            print(f"\n🚨 Fraud Check (Rules): amount={amount}, type={payment_type}, hour={hour}")
-            print(f"   Risk Score: {risk_score:.4f}")
-        
-        # risk level
+            print(f"\n[Fraud rules] price={amount} -> {risk_score:.4f}")
+
+        risk_score, fraud_flags = apply_ood_fraud_boost(
+            distance_km, weight_kg, amount, mean_price, risk_score, fraud_flags
+        )
+        is_fraud = bool(risk_score > 0.5)
+
         if risk_score >= 0.6:
             risk_level = 'high'
         elif risk_score >= 0.3:
             risk_level = 'medium'
         else:
             risk_level = 'low'
-        
+
+        fraud_flags = list(dict.fromkeys(fraud_flags))
+
         return jsonify({
             'success': True,
             'risk_score': round(risk_score, 4),
@@ -356,10 +440,12 @@ def predict_fraud():
             'input': {
                 'amount': amount,
                 'payment_type': payment_type,
-                'hour': hour
+                'hour': hour,
+                'distance_km': distance_km,
+                'weight_kg': weight_kg,
             }
         }), 200
-        
+
     except Exception as e:
         print(f"❌ Fraud prediction error: {str(e)}")
         return jsonify({
@@ -391,15 +477,15 @@ if __name__ == '__main__':
     
     # load models
     eta_loaded = load_model()
-    fraud_loaded = load_fraud_model()
-    
+    fraud_loaded = load_courier_fraud_model()
+
     if not eta_loaded:
         print("\n⚠️ ETA: Running with fallback formula")
         print("   Run 'python train_model.py' to train ETA model")
-    
+
     if not fraud_loaded:
-        print("\n⚠️ Fraud: Running with rule-based fallback")
-        print("   Run 'python train_fraud_model.py' to train fraud model")
+        print("\n⚠️ Courier fraud: Running with rule-based fallback")
+        print("   Run 'python train_courier_fraud_model.py' to train courier model")
     
     print(f"\n🌐 Starting server on http://localhost:{PORT}")
     print("   POST /predict/eta   - Predict delivery time")

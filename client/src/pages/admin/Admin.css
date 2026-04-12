@@ -404,6 +404,16 @@
   border-color: rgba(248, 113, 113, 0.22);
 }
 
+.admin-fraud-review-flag {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #fbbf24;
+}
+
 /* Action buttons */
 .action-btn {
   padding: 0.35rem 0.65rem;

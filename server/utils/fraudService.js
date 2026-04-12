@@ -15,28 +15,35 @@ const ML_TIMEOUT = 5000;
  * Check fraud risk for an order
  * @param {Object} params - Order parameters
  * @param {number} params.amount - Order price
+ * @param {number} params.distance - Distance km
+ * @param {number} params.weight - Weight kg
  * @param {string} params.paymentMethod - COD, Prepaid, or Wallet
  * @param {number} [params.hour] - Hour of order creation (0-23)
  * @returns {Promise<Object>} Fraud assessment result
  */
 async function checkFraud(params) {
-    const { amount, paymentMethod, hour } = params;
-    
+    const { amount, paymentMethod, hour, distance, weight } = params;
+
     const currentHour = hour ?? new Date().getHours();
-    
+    const dist = Number(distance);
+    const wt = Number(weight);
+
     console.log(`\n🚨 Checking fraud risk:`);
     console.log(`   Amount: ₹${amount}`);
+    console.log(`   Distance: ${dist} km, Weight: ${wt} kg`);
     console.log(`   Payment: ${paymentMethod}`);
     console.log(`   Hour: ${currentHour}`);
-    
+
     try {
-        // Try ML service first
+        // Try ML service first (courier model)
         const response = await axios.post(
             `${ML_SERVICE_URL}/predict/fraud`,
             {
                 amount: amount,
                 payment_type: paymentMethod || 'COD',
-                hour: currentHour
+                hour: currentHour,
+                distance_km: dist,
+                weight_kg: wt,
             },
             {
                 timeout: ML_TIMEOUT,
@@ -64,35 +71,76 @@ async function checkFraud(params) {
         console.log(`⚠️ ML Fraud Service unavailable: ${error.message}`);
         console.log(`   Using fallback rule-based scoring...`);
         
-        return calculateFraudFallback(amount, paymentMethod, currentHour);
+        return calculateFraudFallback(
+            amount,
+            paymentMethod,
+            currentHour,
+            dist,
+            wt,
+        );
     }
 }
 
 /**
- * Fallback rule-based fraud scoring
+ * Fallback rule-based fraud scoring (courier-aligned)
  */
-function calculateFraudFallback(amount, paymentMethod, hour) {
+function calculateFraudFallback(
+    amount,
+    paymentMethod,
+    hour,
+    distanceKm = 0,
+    weightKg = 0,
+) {
     let riskScore = 0.0;
     const fraudFlags = [];
-    
-    // Check unusual hour (0-5 AM)
+    const meanRef = 800;
+
     if (hour >= 0 && hour <= 5) {
-        riskScore += 0.25;
-        fraudFlags.push(`Unusual hour (${hour}:00 AM)`);
+        riskScore += 0.22;
+        fraudFlags.push(`Unusual hour (${hour}:00)`);
     }
-    
-    // Check high amount for COD
-    if (paymentMethod === 'COD' && amount > 1000) {
-        riskScore += 0.15;
-        fraudFlags.push('High-value COD order');
+    if (amount > 2 * meanRef) {
+        riskScore += 0.18;
+        fraudFlags.push("Price well above typical average");
     }
-    
-    // Check very high amount
+    if (paymentMethod === "COD" && amount > 1200) {
+        riskScore += 0.12;
+        fraudFlags.push("High-value COD order");
+    }
     if (amount > 5000) {
-        riskScore += 0.25;
-        fraudFlags.push('Unusually high amount');
+        riskScore += 0.2;
+        fraudFlags.push("Unusually high order value");
     }
-    
+    if (distanceKm > 400 && amount > 2000) {
+        riskScore += 0.1;
+        fraudFlags.push("Long-haul high-value order");
+    }
+    if (weightKg > 80 && paymentMethod === "COD") {
+        riskScore += 0.08;
+        fraudFlags.push("Heavy package on COD");
+    }
+    if (amount / meanRef > 2.5) {
+        riskScore += 0.1;
+        fraudFlags.push(`Price ${(amount / meanRef).toFixed(1)}x vs typical`);
+    }
+    // OOD: values far outside training / realistic courier range
+    if (weightKg > 250) {
+        riskScore = Math.max(riskScore, 0.82);
+        fraudFlags.push("Weight far above typical parcel range");
+    }
+    if (amount > 20000) {
+        riskScore = Math.max(riskScore, 0.82);
+        fraudFlags.push("Quoted price far above normal courier range");
+    }
+    if (distanceKm > 2000) {
+        riskScore = Math.max(riskScore, 0.82);
+        fraudFlags.push("Route length unusually large for a single parcel order");
+    }
+    if (amount / meanRef > 30) {
+        riskScore = Math.max(riskScore, 0.82);
+        fraudFlags.push("Price vastly above typical relative to model baseline");
+    }
+
     riskScore = Math.min(riskScore, 1.0);
     
     // Determine risk level

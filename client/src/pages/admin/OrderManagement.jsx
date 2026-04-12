@@ -14,6 +14,7 @@ export default function OrderManagement() {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState("");
+    const [fraudFilter, setFraudFilter] = useState("");
     const [assignModal, setAssignModal] = useState({ show: false, order: null });
     const [statusModal, setStatusModal] = useState({ show: false, order: null });
     const [selectedCourier, setSelectedCourier] = useState("");
@@ -112,7 +113,9 @@ export default function OrderManagement() {
             order.pickupAddress?.toLowerCase().includes(search.toLowerCase()) ||
             order.deliveryAddress?.toLowerCase().includes(search.toLowerCase());
         const matchesStatus = !statusFilter || order.status === statusFilter;
-        return matchesSearch && matchesStatus;
+        const matchesFraud =
+            fraudFilter !== "review" || order.fraudReviewRequired === true;
+        return matchesSearch && matchesStatus && matchesFraud;
     });
 
     if (loading) {
@@ -154,6 +157,10 @@ export default function OrderManagement() {
                     {statuses.map(status => (
                         <option key={status} value={status}>{status}</option>
                     ))}
+                </select>
+                <select value={fraudFilter} onChange={(e) => setFraudFilter(e.target.value)}>
+                    <option value="">All orders</option>
+                    <option value="review">Needs fraud review</option>
                 </select>
             </div>
 
@@ -245,12 +252,19 @@ export default function OrderManagement() {
                                                 const score = order.riskScore || 0;
                                                 const level = score >= 0.6 ? "high" : score >= 0.3 ? "medium" : "low";
                                                 return (
-                                                    <span
-                                                        className={`risk-pill risk-pill--${level}`}
-                                                        title={order.fraudFlags?.length ? order.fraudFlags.join(", ") : "No flags"}
-                                                    >
-                                                        {level.charAt(0).toUpperCase() + level.slice(1)}
-                                                    </span>
+                                                    <div>
+                                                        <span
+                                                            className={`risk-pill risk-pill--${level}`}
+                                                            title={order.fraudFlags?.length ? order.fraudFlags.join(", ") : "No flags"}
+                                                        >
+                                                            {level.charAt(0).toUpperCase() + level.slice(1)}
+                                                        </span>
+                                                        {order.fraudReviewRequired && (
+                                                            <span className="admin-fraud-review-flag" title="Flagged for admin review">
+                                                                Review
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 );
                                             })()}
                                         </td>

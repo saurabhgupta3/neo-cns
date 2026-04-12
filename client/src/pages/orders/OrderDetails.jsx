@@ -5,7 +5,7 @@ import { getAdjustedETA, formatETA } from "../../utils/etaHelper";
 import { toast } from "react-toastify";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft, faEdit, faTrash, faHistory, faMapMarkerAlt } from "@fortawesome/free-solid-svg-icons";
-import { MapContainer, TileLayer, Marker, Popup, Polyline } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./Orders.css";
@@ -94,8 +94,36 @@ function StatusTimeline({ currentStatus, statusHistory }) {
     );
 }
 
+function MapResizeFix() {
+    const map = useMap();
+    useEffect(() => {
+        const fix = () => map.invalidateSize();
+        fix();
+        const raf = requestAnimationFrame(fix);
+        const timeout = setTimeout(fix, 200);
+        return () => {
+            cancelAnimationFrame(raf);
+            clearTimeout(timeout);
+        };
+    }, [map]);
+    return null;
+}
+
 function OrderMap({ pickupCoords, deliveryCoords, pickupAddress, deliveryAddress }) {
-    if (!pickupCoords?.lat || !deliveryCoords?.lat) return null;
+    if (!pickupCoords?.lat || !deliveryCoords?.lat) {
+        return (
+            <div className="order-map-card order-map-card--empty">
+                <div className="order-map-header">
+                    <FontAwesomeIcon icon={faMapMarkerAlt} />
+                    Route Map
+                </div>
+                <div className="order-map-empty-body">
+                    No map coordinates for this order. Edit the order and save pickup and delivery
+                    addresses again to store locations and show the route map.
+                </div>
+            </div>
+        );
+    }
 
     const pickupPos = [pickupCoords.lat, pickupCoords.lng];
     const deliveryPos = [deliveryCoords.lat, deliveryCoords.lng];
@@ -114,6 +142,8 @@ function OrderMap({ pickupCoords, deliveryCoords, pickupAddress, deliveryAddress
     else if (maxDiff > 0.2) zoom = 10;
     else if (maxDiff > 0.1) zoom = 11;
 
+    const mapKey = `${pickupCoords.lat},${pickupCoords.lng}-${deliveryCoords.lat},${deliveryCoords.lng}`;
+
     return (
         <div className="order-map-card">
             <div className="order-map-header">
@@ -122,14 +152,18 @@ function OrderMap({ pickupCoords, deliveryCoords, pickupAddress, deliveryAddress
             </div>
             <div className="order-map-wrapper">
                 <MapContainer
+                    key={mapKey}
                     center={[centerLat, centerLng]}
                     zoom={zoom}
                     scrollWheelZoom={false}
-                    style={{ height: '100%', width: '100%', borderRadius: '0 0 var(--radius-lg) var(--radius-lg)' }}
+                    style={{ height: "100%", width: "100%", minHeight: "320px", borderRadius: "0 0 var(--radius-lg) var(--radius-lg)" }}
                     attributionControl={false}
                 >
+                    <MapResizeFix />
                     <TileLayer
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
                         url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                        subdomains="abcd"
                     />
                     <Marker position={pickupPos} icon={pickupIcon}>
                         <Popup>
@@ -333,27 +367,9 @@ export default function OrderDetails() {
 
                         {order.riskScore !== undefined && order.riskScore !== null && (
                             <div className="detail-item">
-                                <span className="detail-item-label">Fraud Risk</span>
-                                <span className="detail-item-value">
-                                    {(() => {
-                                        const score = order.riskScore;
-                                        const level = score >= 0.6 ? 'high' : score >= 0.3 ? 'medium' : 'low';
-                                        const icon = level === 'high' ? '🔴' : level === 'medium' ? '🟡' : '🟢';
-                                        return (
-                                            <>
-                                                <span className={`status-pill ${level === 'high' ? 'cancelled' : level === 'medium' ? 'pending' : 'delivered'}`}>
-                                                    {icon} {level.toUpperCase()} ({(score * 100).toFixed(0)}%)
-                                                </span>
-                                                {order.fraudFlags?.length > 0 && (
-                                                    <ul className="fraud-flags">
-                                                        {order.fraudFlags.map((flag, i) => (
-                                                            <li key={i}>⚠️ {flag}</li>
-                                                        ))}
-                                                    </ul>
-                                                )}
-                                            </>
-                                        );
-                                    })()}
+                                <span className="detail-item-label">Fraud score</span>
+                                <span className="detail-item-value fraud-score-value">
+                                    {(Number(order.riskScore) * 100).toFixed(1)}%
                                 </span>
                             </div>
                         )}

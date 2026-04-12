@@ -442,6 +442,13 @@
     padding: 0.15rem 0;
 }
 
+.fraud-review-notice {
+    margin: 0.5rem 0 0;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #fbbf24;
+}
+
 /* form pages */
 .order-form-container {
     max-width: 800px;
@@ -676,6 +683,18 @@
     overflow: hidden;
 }
 
+.order-map-card--empty .order-map-empty-body {
+    padding: 1.25rem 1.5rem 1.5rem;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    line-height: 1.45;
+}
+
+.fraud-score-value {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+}
+
 .order-map-header {
     padding: 1.25rem 1.5rem;
     border-bottom: 1px solid var(--border-subtle);
@@ -693,6 +712,9 @@
 
 .order-map-wrapper .leaflet-container {
     background: var(--bg-secondary) !important;
+    height: 100% !important;
+    min-height: 320px;
+    z-index: 0;
 }
 
 .order-map-wrapper .leaflet-control-zoom {

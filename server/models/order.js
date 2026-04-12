@@ -127,6 +127,10 @@ const orderSchema = new Schema({
     fraudFlags: [{
         type: String
     }],
+    fraudReviewRequired: {
+        type: Boolean,
+        default: false,
+    },
     // payment info
     paymentMethod: {
         type: String,

@@ -189,10 +189,11 @@ export default function OrderNew() {
                                     onChange={handleChange}
                                     required
                                     min="0.1"
+                                    max="500"
                                     step="0.1"
                                 />
                                 <div className="invalid-feedback">
-                                    Please enter a valid weight.
+                                    Enter weight between 0.1 and 500 kg.
                                 </div>
                             </div>
 

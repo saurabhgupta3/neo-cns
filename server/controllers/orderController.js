@@ -3,6 +3,8 @@ const {
     calculateDistance,
     calculatePrice,
 } = require("../utils/distanceService");
+
+const MAX_PACKAGE_WEIGHT_KG = 500;
 const { predictETA } = require("../utils/etaService");
 const { checkFraud } = require("../utils/fraudService");
 const ExpressError = require("../utils/expressError");
@@ -67,6 +69,19 @@ const createOrder = async (req, res, next) => {
     try {
         const orderData = req.body;
 
+        const wCreate = parseFloat(orderData.weight);
+        if (!Number.isFinite(wCreate) || wCreate < 0.01) {
+            return next(new ExpressError(400, "Enter a valid package weight (kg)."));
+        }
+        if (wCreate > MAX_PACKAGE_WEIGHT_KG) {
+            return next(
+                new ExpressError(
+                    400,
+                    `Package weight cannot exceed ${MAX_PACKAGE_WEIGHT_KG} kg.`,
+                ),
+            );
+        }
+
         // calc distance
         let distanceResult;
         try {
@@ -76,6 +91,14 @@ const createOrder = async (req, res, next) => {
             );
             orderData.distance = distanceResult.distance;
             orderData.distanceMethod = distanceResult.method;
+            orderData.pickupCoordinates = {
+                lat: distanceResult.pickupCoords.lat,
+                lng: distanceResult.pickupCoords.lng,
+            };
+            orderData.deliveryCoordinates = {
+                lat: distanceResult.deliveryCoords.lat,
+                lng: distanceResult.deliveryCoords.lng,
+            };
             orderData.price = calculatePrice(
                 orderData.weight,
                 orderData.distance,
@@ -120,16 +143,20 @@ const createOrder = async (req, res, next) => {
             // eta optional
         }
 
-        // check fraud
+        // check fraud (courier ML: distance, weight, price, payment, hour)
         try {
             const fraudResult = await checkFraud({
                 amount: orderData.price,
+                distance: orderData.distance,
+                weight: parseFloat(orderData.weight) || 1,
                 paymentMethod: orderData.paymentMethod || "COD",
                 hour: new Date().getHours(),
             });
 
             orderData.riskScore = fraudResult.riskScore;
             orderData.fraudFlags = fraudResult.fraudFlags;
+            orderData.fraudReviewRequired =
+                fraudResult.riskScore >= 0.3 || fraudResult.isFraud;
 
             console.log(
                 `\u2705 Fraud check: ${fraudResult.riskLevel} risk (${fraudResult.riskScore})`,
@@ -138,6 +165,7 @@ const createOrder = async (req, res, next) => {
             console.log("\u26a0\ufe0f Fraud check failed:", fraudError.message);
             orderData.riskScore = 0;
             orderData.fraudFlags = [];
+            orderData.fraudReviewRequired = false;
         }
 
         // attach user
@@ -246,6 +274,14 @@ const updateOrder = async (req, res, next) => {
                 );
                 orderData.distance = distanceResult.distance;
                 orderData.distanceMethod = distanceResult.method;
+                orderData.pickupCoordinates = {
+                    lat: distanceResult.pickupCoords.lat,
+                    lng: distanceResult.pickupCoords.lng,
+                };
+                orderData.deliveryCoordinates = {
+                    lat: distanceResult.deliveryCoords.lat,
+                    lng: distanceResult.deliveryCoords.lng,
+                };
                 orderData.price = calculatePrice(
                     orderData.weight || order.weight,
                     orderData.distance,
@@ -275,6 +311,46 @@ const updateOrder = async (req, res, next) => {
                 }
             } catch (distanceError) {
                 return next(new ExpressError(400, distanceError.message));
+            }
+        }
+
+        const weightInBody = orderData.weight !== undefined;
+        const payInBody = orderData.paymentMethod !== undefined;
+        if (
+            (weightInBody || payInBody) &&
+            !orderData.pickupAddress &&
+            !orderData.deliveryAddress
+        ) {
+            const w = parseFloat(orderData.weight ?? order.weight) || 1;
+            const d = orderData.distance ?? order.distance;
+            orderData.price = calculatePrice(w, d);
+        }
+
+        const fraudRelevant =
+            orderData.pickupAddress ||
+            orderData.deliveryAddress ||
+            weightInBody ||
+            payInBody;
+
+        if (fraudRelevant) {
+            const w = parseFloat(orderData.weight ?? order.weight) || 1;
+            const d = orderData.distance ?? order.distance;
+            const p = orderData.price ?? order.price;
+            const pm = orderData.paymentMethod ?? order.paymentMethod;
+            try {
+                const fraudResult = await checkFraud({
+                    amount: p,
+                    distance: d,
+                    weight: w,
+                    paymentMethod: pm || "COD",
+                    hour: new Date().getHours(),
+                });
+                orderData.riskScore = fraudResult.riskScore;
+                orderData.fraudFlags = fraudResult.fraudFlags;
+                orderData.fraudReviewRequired =
+                    fraudResult.riskScore >= 0.3 || fraudResult.isFraud;
+            } catch (fraudError) {
+                console.log("\u26a0\ufe0f Fraud recalc failed:", fraudError.message);
             }
         }
 
