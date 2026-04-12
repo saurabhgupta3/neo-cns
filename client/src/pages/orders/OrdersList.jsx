@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from "../../context/AuthContext";
 import { getAdjustedETA } from "../../utils/etaHelper";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faBoxOpen } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faBoxOpen, faClock } from "@fortawesome/free-solid-svg-icons";
 import "./Orders.css";
 
 export default function OrdersList() {
@@ -59,8 +59,8 @@ export default function OrdersList() {
             <div className="orders-page-header">
                 <h2>{user?.role === "courier" ? "My Assigned Orders" : "All Orders"}</h2>
                 {user?.role !== "courier" && (
-                    <Link to="/orders/new" className="btn btn-primary">
-                        <FontAwesomeIcon icon={faPlus} className="me-2" />
+                    <Link to="/orders/new" className="btn btn-primary orders-btn-primary">
+                        <FontAwesomeIcon icon={faPlus} className="me-2" aria-hidden />
                         New Order
                     </Link>
                 )}
@@ -82,8 +82,8 @@ export default function OrdersList() {
                             : "Create your first order to get started."}
                     </p>
                     {user?.role !== "courier" && (
-                        <Link to="/orders/new" className="btn btn-primary">
-                            <FontAwesomeIcon icon={faPlus} className="me-2" />
+                        <Link to="/orders/new" className="btn btn-primary orders-btn-primary">
+                            <FontAwesomeIcon icon={faPlus} className="me-2" aria-hidden />
                             Create Order
                         </Link>
                     )}
@@ -97,15 +97,14 @@ export default function OrdersList() {
                             <Link to={`/orders/${order._id}`} key={order._id} className="order-show-link">
                                 <div className="order-card">
                                     <div className="order-card-header">
-                                        <div className="order-card-route">
-                                            <div className="route-icon">
-                                                <div className="route-dot"></div>
-                                                <div className="route-line"></div>
-                                                <div className="route-dot-end"></div>
+                                        <div className="order-party-block">
+                                            <div className="order-party-row">
+                                                <span className="order-party-label">From</span>
+                                                <span className="order-party-value">{order.senderName}</span>
                                             </div>
-                                            <div className="order-card-names">
-                                                <span className="sender">{order.senderName}</span>
-                                                <span className="receiver">{order.receiverName}</span>
+                                            <div className="order-party-row">
+                                                <span className="order-party-label">To</span>
+                                                <span className="order-party-value">{order.receiverName}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -116,7 +115,8 @@ export default function OrdersList() {
                                         </span>
                                         {eta && (
                                             <span className="eta-badge" title={eta.label}>
-                                                🕐 {eta.formatted}
+                                                <FontAwesomeIcon icon={faClock} className="eta-badge-icon" aria-hidden />
+                                                {eta.formatted}
                                             </span>
                                         )}
                                     </div>

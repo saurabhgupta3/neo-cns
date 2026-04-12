@@ -2,13 +2,13 @@
 
 // phase buffers
 const PHASE_BUFFER = {
-    "Pending": 45,
-    "Confirmed": 30,
+    Pending: 45,
+    Confirmed: 30,
     "Picked Up": 15,
     "In Transit": 5,
     "Out for Delivery": 0,
-    "Delivered": 0,
-    "Cancelled": 0
+    Delivered: 0,
+    Cancelled: 0,
 };
 
 // get adjusted ETA
@@ -23,7 +23,7 @@ export function getAdjustedETA(etaMinutes, status) {
     return {
         totalMinutes,
         formatted: formatETA(totalMinutes),
-        label: getETALabel(status)
+        label: getETALabel(status),
     };
 }
 
@@ -40,11 +40,11 @@ export function formatETA(minutes) {
 // status label
 function getETALabel(status) {
     const labels = {
-        "Pending": "Est. total time",
-        "Confirmed": "Est. remaining",
+        Pending: "Est. total time",
+        Confirmed: "Est. remaining",
         "Picked Up": "Est. delivery in",
         "In Transit": "Arriving in",
-        "Out for Delivery": "Arrives in"
+        "Out for Delivery": "Arrives in",
     };
     return labels[status] || "ETA";
 }

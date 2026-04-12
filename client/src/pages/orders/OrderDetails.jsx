@@ -264,19 +264,21 @@ export default function OrderDetails() {
 
             <div className="order-detail-card">
                 <div className="order-detail-header">
-                    <div className="order-detail-route">
-                        <div className="route-visual">
-                            <div className="dot-from"></div>
-                            <div className="route-arrow"></div>
-                            <div className="dot-to"></div>
+                    <div className="order-detail-header-main">
+                        <div className="order-party-block order-party-block--detail">
+                            <div className="order-party-row">
+                                <span className="order-party-label">From</span>
+                                <span className="order-party-value">{order.senderName}</span>
+                            </div>
+                            <div className="order-party-row">
+                                <span className="order-party-label">To</span>
+                                <span className="order-party-value">{order.receiverName}</span>
+                            </div>
                         </div>
-                        <div className="order-detail-names">
-                            <h3>{order.senderName} → {order.receiverName}</h3>
-                        </div>
+                        <span className={`status-pill ${statusClass}`} style={{ fontSize: '0.85rem' }}>
+                            {order.status}
+                        </span>
                     </div>
-                    <span className={`status-pill ${statusClass}`} style={{ fontSize: '0.85rem' }}>
-                        {order.status}
-                    </span>
                 </div>
 
                 <div className="order-detail-body">
