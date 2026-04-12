@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import { getAdjustedETA } from "../../utils/etaHelper";
+import { getAdjustedETA, formatETA } from "../../utils/etaHelper";
 import { toast } from "react-toastify";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft, faEdit, faTrash, faHistory, faMapMarkerAlt } from "@fortawesome/free-solid-svg-icons";
@@ -25,6 +25,8 @@ const deliveryIcon = new L.DivIcon({
     iconAnchor: [12, 36],
     popupAnchor: [0, -36]
 });
+
+const DEFAULT_PICKUP_MINUTES = 9;
 
 const ALL_STATUSES = ["Pending", "Confirmed", "Picked Up", "In Transit", "Out for Delivery", "Delivered"];
 
@@ -312,14 +314,22 @@ export default function OrderDetails() {
                             </div>
                         ) : null}
 
-                        {order.estimatedDeliveryTime && order.status !== "Delivered" && order.status !== "Cancelled" && (
-                            <div className="detail-item">
-                                <span className="detail-item-label">Expected By</span>
-                                <span className="detail-item-value">
-                                    {new Date(order.estimatedDeliveryTime).toLocaleString()}
-                                </span>
-                            </div>
-                        )}
+                        <div className="detail-item detail-item--timing">
+                            <span className="detail-item-label">Pickup Time</span>
+                            <span className="detail-item-value">
+                                {order.courier
+                                    ? `${DEFAULT_PICKUP_MINUTES} minutes`
+                                    : "Courier not assigned"}
+                            </span>
+                        </div>
+                        <div className="detail-item detail-item--timing">
+                            <span className="detail-item-label">AI-Predicted Delivery Time (Sender → Receiver)</span>
+                            <span className="detail-item-value">
+                                {order.etaMinutes != null && Number(order.etaMinutes) > 0
+                                    ? formatETA(Math.round(Number(order.etaMinutes)))
+                                    : "—"}
+                            </span>
+                        </div>
 
                         {order.riskScore !== undefined && order.riskScore !== null && (
                             <div className="detail-item">

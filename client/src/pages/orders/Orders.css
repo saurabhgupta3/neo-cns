@@ -338,6 +338,18 @@
     color: var(--text-primary);
 }
 
+.detail-item--timing {
+    grid-column: 1 / -1;
+}
+
+.detail-item--timing .detail-item-label {
+    text-transform: none;
+    letter-spacing: normal;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.35;
+}
+
 .detail-item-value.price {
     font-size: 1.2rem;
     font-weight: 700;
