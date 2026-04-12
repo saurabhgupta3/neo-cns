@@ -19,7 +19,7 @@ export default function Login() {
     const navigate = useNavigate();
     const location = useLocation();
 
-    // Where to redirect after login
+    // redirect path
     const from = location.state?.from?.pathname || "/orders";
 
     const handleChange = (e) => {
@@ -27,7 +27,7 @@ export default function Login() {
             ...formData,
             [e.target.name]: e.target.value
         });
-        setError(""); // Clear error on input
+        setError("");
     };
 
     const handleSubmit = async (e) => {

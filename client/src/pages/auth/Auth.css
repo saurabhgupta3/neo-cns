@@ -1,4 +1,4 @@
-/* ===== Auth Pages ===== */
+/* auth pages */
 
 .auth-container {
   min-height: 100vh;
@@ -185,7 +185,7 @@
   padding-right: 45px !important;
 }
 
-/* Forgot/Reset Password Styles */
+/* reset password */
 .email-sent-success {
   text-align: center;
   padding: 1rem 0;
@@ -273,7 +273,8 @@
   color: white;
 }
 
-/* Form group spacing fix for ForgotPassword */
+/* form spacing */
 .auth-form .form-group {
   margin-bottom: 0.5rem;
 }
+

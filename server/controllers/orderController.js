@@ -4,9 +4,7 @@ const { predictETA } = require("../utils/etaService");
 const { checkFraud } = require("../utils/fraudService");
 const ExpressError = require("../utils/expressError");
 
-// @desc    Get all orders (role-based filtering)
-// @route   GET /api/orders
-// @access  Private
+// get all orders
 const getAllOrders = async (req, res, next) => {
     try {
         let query = {};
@@ -16,7 +14,7 @@ const getAllOrders = async (req, res, next) => {
         } else if (req.user.role === "courier") {
             query.courier = req.user._id;
         }
-        // Admin sees all orders (no filter)
+        // admin sees all
         
         const orders = await Order.find(query)
             .populate("user", "name email")
@@ -33,9 +31,7 @@ const getAllOrders = async (req, res, next) => {
     }
 };
 
-// @desc    Get single order
-// @route   GET /api/orders/:id
-// @access  Private
+// get single order
 const getOrderById = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -47,7 +43,7 @@ const getOrderById = async (req, res, next) => {
             return next(new ExpressError(404, "Order not found"));
         }
         
-        // Check if user has permission to view this order
+        // check permission
         if (req.user.role === "user" && order.user._id.toString() !== req.user._id.toString()) {
             return next(new ExpressError(403, "Not authorized to view this order"));
         }
@@ -58,19 +54,17 @@ const getOrderById = async (req, res, next) => {
     }
 };
 
-// @desc    Create new order
-// @route   POST /api/orders
-// @access  Private (Users and Admins only)
+// create new order
 const createOrder = async (req, res, next) => {
     try {
         const orderData = req.body;
         
-        // Calculate distance and price (async - uses real distance API)
+        // calc distance
         let distanceResult;
         try {
             distanceResult = await calculateDistance(orderData.pickupAddress, orderData.deliveryAddress);
-            orderData.distance = distanceResult.distance; // Road distance for display
-            orderData.distanceMethod = distanceResult.method; // Track which method was used
+            orderData.distance = distanceResult.distance;
+            orderData.distanceMethod = distanceResult.method;
             orderData.price = calculatePrice(orderData.weight, orderData.distance);
             
             console.log(`✅ Order distance: ${orderData.distance} km (via ${distanceResult.method})`);
@@ -80,13 +74,13 @@ const createOrder = async (req, res, next) => {
             return next(new ExpressError(400, distanceError.message));
         }
         
-        // Predict ETA using ML service (uses Haversine distance to match training data)
+        // predict ETA
         try {
             const etaResult = await predictETA({
-                distance: distanceResult.haversineDistance, // Pure Haversine - matches training data
+                distance: distanceResult.haversineDistance,
                 weight: parseFloat(orderData.weight) || 1,
                 hourOfDay: new Date().getHours(),
-                trafficLevel: 2 // Default medium traffic
+                trafficLevel: 2
             });
             
             orderData.estimatedDeliveryTime = etaResult.estimatedDeliveryTime;
@@ -97,10 +91,10 @@ const createOrder = async (req, res, next) => {
             console.log(`✅ ETA predicted: ${etaResult.etaFormatted} (${etaResult.method})`);
         } catch (etaError) {
             console.log('⚠️ ETA prediction failed, will be calculated later:', etaError.message);
-            // ETA is optional, don't fail the order creation
+            // eta optional
         }
         
-        // Check fraud risk using ML service
+        // check fraud
         try {
             const fraudResult = await checkFraud({
                 amount: orderData.price,
@@ -118,10 +112,10 @@ const createOrder = async (req, res, next) => {
             orderData.fraudFlags = [];
         }
         
-        // Attach user to order
+        // attach user
         orderData.user = req.user._id;
         
-        // Initialize status history
+        // init history
         orderData.statusHistory = [{
             status: "Pending",
             timestamp: new Date(),
@@ -131,7 +125,7 @@ const createOrder = async (req, res, next) => {
         const newOrder = new Order(orderData);
         await newOrder.save();
         
-        // Populate user info before sending response
+        // populate user
         await newOrder.populate("user", "name email");
         
         res.status(201).json({
@@ -156,7 +150,7 @@ const createOrder = async (req, res, next) => {
     }
 };
 
-// Helper function to format ETA
+// format ETA
 function formatETA(minutes) {
     if (minutes >= 1440) {
         const days = Math.floor(minutes / 1440);
@@ -171,9 +165,7 @@ function formatETA(minutes) {
     return `${minutes}m`;
 }
 
-// @desc    Update order
-// @route   PUT /api/orders/:id
-// @access  Private
+// update order
 const updateOrder = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -185,20 +177,20 @@ const updateOrder = async (req, res, next) => {
             return next(new ExpressError(404, "Order not found"));
         }
         
-        // Check permission
+        // check permission
         if (req.user.role === "user" && order.user.toString() !== req.user._id.toString()) {
             return next(new ExpressError(403, "Not authorized to update this order"));
         }
         
-        // Users can only update certain fields
+        // user restrictions
         if (req.user.role === "user") {
-            // Users can only update if order is still pending
+            // pending only
             if (order.status !== "Pending") {
                 return next(new ExpressError(400, "Cannot update order after it has been confirmed"));
             }
         }
         
-        // Recalculate distance and price if addresses changed
+        // recalc distance
         if (orderData.pickupAddress || orderData.deliveryAddress) {
             try {
                 const distanceResult = await calculateDistance(
@@ -209,7 +201,7 @@ const updateOrder = async (req, res, next) => {
                 orderData.distanceMethod = distanceResult.method;
                 orderData.price = calculatePrice(orderData.weight || order.weight, orderData.distance);
                 
-                // Recalculate ETA with new Haversine distance
+                // recalc ETA
                 try {
                     const etaResult = await predictETA({
                         distance: distanceResult.haversineDistance,
@@ -243,9 +235,7 @@ const updateOrder = async (req, res, next) => {
     }
 };
 
-// @desc    Update order status
-// @route   PUT /api/orders/:id/status
-// @access  Private (Admin/Courier only)
+// update status
 const updateOrderStatus = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -263,7 +253,7 @@ const updateOrderStatus = async (req, res, next) => {
             return next(new ExpressError(404, "Order not found"));
         }
         
-        // Add to status history
+        // add history
         order.statusHistory.push({
             status,
             timestamp: new Date(),
@@ -273,7 +263,7 @@ const updateOrderStatus = async (req, res, next) => {
         
         order.status = status;
         
-        // Set actual delivery time if delivered
+        // set delivery
         if (status === "Delivered") {
             order.actualDeliveryTime = new Date();
         }
@@ -292,9 +282,7 @@ const updateOrderStatus = async (req, res, next) => {
     }
 };
 
-// @desc    Assign courier to order
-// @route   PUT /api/orders/:id/assign
-// @access  Private (Admin only)
+// assign courier
 const assignCourier = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -333,9 +321,7 @@ const assignCourier = async (req, res, next) => {
     }
 };
 
-// @desc    Delete order
-// @route   DELETE /api/orders/:id
-// @access  Private
+// delete order
 const deleteOrder = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -346,12 +332,12 @@ const deleteOrder = async (req, res, next) => {
             return next(new ExpressError(404, "Order not found"));
         }
         
-        // Only admin or order owner can delete
+        // auth check
         if (req.user.role !== "admin" && order.user.toString() !== req.user._id.toString()) {
             return next(new ExpressError(403, "Not authorized to delete this order"));
         }
         
-        // Users can only delete pending orders
+        // pending only
         if (req.user.role === "user" && order.status !== "Pending") {
             return next(new ExpressError(400, "Cannot delete order after it has been confirmed"));
         }

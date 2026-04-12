@@ -22,13 +22,13 @@ const statusHistorySchema = new Schema({
 }, { _id: false });
 
 const orderSchema = new Schema({
-    // User who created the order
+    // order creator
     user: {
         type: Schema.Types.ObjectId,
         ref: "User",
         required: true
     },
-    // Assigned courier
+    // assigned courier
     courier: {
         type: Schema.Types.ObjectId,
         ref: "User"
@@ -55,7 +55,7 @@ const orderSchema = new Schema({
         type: String,
         required: true,
     },
-    // Coordinates for mapping and ETA calculation
+    // geo coordinates
     pickupCoordinates: {
         lat: Number,
         lng: Number
@@ -97,7 +97,7 @@ const orderSchema = new Schema({
         type: Number,
         required: true,
     },
-    // ETA related fields
+    // eta fields
     estimatedDeliveryTime: {
         type: Date
     },
@@ -117,7 +117,7 @@ const orderSchema = new Schema({
         enum: ['ml_prediction', 'fallback_formula', 'distance_formula', null],
         default: null
     },
-    // Fraud detection fields
+    // fraud detection
     riskScore: {
         type: Number,
         default: 0,
@@ -127,7 +127,7 @@ const orderSchema = new Schema({
     fraudFlags: [{
         type: String
     }],
-    // Payment info
+    // payment info
     paymentMethod: {
         type: String,
         enum: ["COD", "Prepaid", "Wallet"],
@@ -137,7 +137,7 @@ const orderSchema = new Schema({
         type: Boolean,
         default: false
     },
-    // Notes
+    // extra notes
     specialInstructions: {
         type: String
     },
@@ -151,7 +151,7 @@ const orderSchema = new Schema({
     }
 });
 
-// Update timestamp on save
+// update timestamp
 orderSchema.pre("save", function(next) {
     this.updatedAt = Date.now();
     next();

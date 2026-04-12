@@ -3,26 +3,26 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import './App.css';
 
-// Context
+// context import
 import { AuthProvider } from './context/AuthContext';
 
-// Components
+// component imports
 import { ProtectedRoute, PublicRoute } from './components/ProtectedRoute';
 import Layout from './layouts/Layout';
 
-// Auth Pages
+// auth pages
 import { Login, Register, ForgotPassword, ResetPassword, Unauthorized } from './pages/auth';
 
-// Order Pages
+// order pages
 import { OrdersList, OrderDetails, OrderNew, OrderEdit } from './pages/orders';
 
-// Common Pages
+// common pages
 import { NotFound } from './pages/common';
 
-// User Pages
+// user pages
 import Profile from './pages/Profile';
 
-// Admin Pages
+// admin pages
 import { AdminDashboard, UserManagement, OrderManagement, ApplicationManagement } from './pages/admin';
 
 function App() {
@@ -38,7 +38,7 @@ function App() {
           pauseOnHover
         />
         <Routes>
-          {/* Public Routes (redirect if logged in) */}
+          {/* public routes */}
           <Route path="/login" element={
             <PublicRoute>
               <Login />
@@ -60,7 +60,7 @@ function App() {
             </PublicRoute>
           } />
 
-          {/* Protected Routes (require login) */}
+          {/* protected routes */}
           <Route element={<Layout />}>
             <Route path="/" element={<Navigate to="/orders" />} />
 
@@ -94,7 +94,7 @@ function App() {
               </ProtectedRoute>
             } />
 
-            {/* Admin Routes - Only accessible by admins */}
+            {/* admin routes */}
             <Route path="/admin" element={
               <ProtectedRoute allowedRoles={["admin"]}>
                 <AdminDashboard />

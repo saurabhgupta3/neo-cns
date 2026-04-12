@@ -3,10 +3,10 @@ const User = require("../models/user");
 const config = require("../config/config");
 const ExpressError = require("../utils/expressError");
 
-// Middleware to verify JWT token
+// verify JWT token
 const authenticate = async (req, res, next) => {
     try {
-        // Get token from header
+        // extract token
         const authHeader = req.headers.authorization;
         
         if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -15,17 +15,17 @@ const authenticate = async (req, res, next) => {
 
         const token = authHeader.split(" ")[1];
 
-        // Verify token
+        // verify token
         const decoded = jwt.verify(token, config.JWT_SECRET);
 
-        // Find user by id
+        // find user
         const user = await User.findById(decoded.id);
         
         if (!user) {
             return next(new ExpressError(401, "User not found. Token is invalid."));
         }
 
-        // Check if user is soft-deleted
+        // check deleted
         if (user.deletedAt) {
             return next(new ExpressError(401, "Account has been deleted. Please contact support."));
         }
@@ -34,7 +34,7 @@ const authenticate = async (req, res, next) => {
             return next(new ExpressError(401, "Account is deactivated. Please contact support."));
         }
 
-        // Attach user to request object
+        // attach user
         req.user = user;
         next();
     } catch (error) {
@@ -48,7 +48,7 @@ const authenticate = async (req, res, next) => {
     }
 };
 
-// Middleware to authorize specific roles
+// authorize roles
 const authorize = (...roles) => {
     return (req, res, next) => {
         if (!req.user) {
@@ -63,7 +63,7 @@ const authorize = (...roles) => {
     };
 };
 
-// Optional authentication - doesn't fail if no token, just doesn't attach user
+// optional auth
 const optionalAuth = async (req, res, next) => {
     try {
         const authHeader = req.headers.authorization;
@@ -82,7 +82,7 @@ const optionalAuth = async (req, res, next) => {
         
         next();
     } catch (error) {
-        // Silently continue without user if token is invalid
+        // skip silently
         next();
     }
 };

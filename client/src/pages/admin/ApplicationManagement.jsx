@@ -151,13 +151,15 @@ export default function ApplicationManagement() {
 
     return (
         <div className="admin-page">
-            <div className="admin-header">
-                <h2>
-                    <FontAwesomeIcon icon={faClipboardList} className="me-2" />
-                    Courier Applications
-                </h2>
-                <p className="text-muted">Review and manage courier applications</p>
-            </div>
+            <header className="admin-page-head">
+                <div>
+                    <h1>
+                        <FontAwesomeIcon icon={faClipboardList} className="me-2" aria-hidden />
+                        Courier applications
+                    </h1>
+                    <p className="admin-subtitle">Review and manage courier applications</p>
+                </div>
+            </header>
 
             {/* Filter Tabs */}
             <div className="filter-tabs mb-4">
@@ -185,8 +187,8 @@ export default function ApplicationManagement() {
             </div>
 
             {loading ? (
-                <div className="text-center py-5">
-                    <div className="spinner-border text-primary" role="status">
+                <div className="admin-loading-state text-center py-5">
+                    <div className="spinner-border" role="status">
                         <span className="visually-hidden">Loading...</span>
                     </div>
                 </div>
@@ -196,7 +198,8 @@ export default function ApplicationManagement() {
                     <p className="text-muted mt-3">No {filter} applications found.</p>
                 </div>
             ) : (
-                <div className="table-responsive">
+                <div className="admin-card">
+                    <div className="admin-card-body admin-table-wrap">
                     <table className="table admin-table">
                         <thead>
                             <tr>
@@ -242,6 +245,7 @@ export default function ApplicationManagement() {
                             ))}
                         </tbody>
                     </table>
+                    </div>
                 </div>
             )}
 

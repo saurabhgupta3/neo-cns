@@ -1,7 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 
-// Import routes
+// route imports
 const authRoutes = require("./routes/authRoutes");
 const orderRoutes = require("./routes/orderRoutes");
 const userRoutes = require("./routes/userRoutes");
@@ -10,12 +10,12 @@ const uploadRoutes = require("./routes/uploadRoutes");
 const etaRoutes = require("./routes/etaRoutes");
 const chatRoutes = require("./routes/chatRoutes");
 
-// Import error handler
+// error handler
 const ExpressError = require("./utils/expressError");
 
 const app = express();
 
-// Middleware
+// middleware setup
 app.use(cors({
     origin: "http://localhost:5173",
     credentials: true
@@ -23,7 +23,7 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Health check route
+// health check
 app.get("/", (req, res) => {
     res.json({ 
         success: true,
@@ -44,7 +44,7 @@ app.get("/health", (req, res) => {
     res.json({ status: "healthy", timestamp: new Date().toISOString() });
 });
 
-// API Routes
+// api routes
 app.use("/api/auth", authRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/users", userRoutes);
@@ -58,11 +58,11 @@ app.use((req, res, next) => {
     next(new ExpressError(404, `Route ${req.originalUrl} not found`));
 });
 
-// Global error handler
+// error handler
 app.use((err, req, res, next) => {
     let { statusCode = 500, message = "Something went wrong" } = err;
     
-    // Log error for debugging (skip in test environment)
+    // log errors
     if (process.env.NODE_ENV !== "test") {
         console.error(`❌ Error: ${message}`);
         if (process.env.NODE_ENV === "development") {
@@ -70,20 +70,20 @@ app.use((err, req, res, next) => {
         }
     }
     
-    // Mongoose validation error
+    // validation error
     if (err.name === "ValidationError") {
         statusCode = 400;
         message = Object.values(err.errors).map(e => e.message).join(", ");
     }
     
-    // Mongoose duplicate key error
+    // duplicate key
     if (err.code === 11000) {
         statusCode = 400;
         const field = Object.keys(err.keyValue)[0];
         message = `${field} already exists`;
     }
     
-    // Mongoose cast error (invalid ObjectId)
+    // invalid ObjectId
     if (err.name === "CastError") {
         statusCode = 400;
         message = "Invalid ID format";

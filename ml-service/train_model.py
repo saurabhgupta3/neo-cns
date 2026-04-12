@@ -1,16 +1,4 @@
-"""
-ETA Prediction Model Training Script
-=====================================
-This script trains a Random Forest model on real delivery data from Kaggle.
-
-Dataset: Food Delivery Time Prediction
-Source: https://www.kaggle.com/datasets/gauravmalik26/food-delivery-dataset
-
-Usage:
-    1. Download the dataset from Kaggle
-    2. Place 'deliverytime.csv' in 'D:/code/Projects/ml-data/'
-    3. Run: python train_model.py
-"""
+# ETA model training
 
 import pandas as pd
 import numpy as np
@@ -23,13 +11,13 @@ import os
 import warnings
 warnings.filterwarnings('ignore')
 
-# Paths
+# file paths
 DATA_PATH = 'D:/code/Projects/ml-data/deliverytime.csv'
 MODEL_PATH = 'models/eta_model.pkl'
 ENCODERS_PATH = 'models/encoders.pkl'
 
 def load_and_prepare_data():
-    """Load and preprocess the Kaggle delivery dataset"""
+    """Prepare dataset"""
     
     print("📂 Loading dataset...")
     
@@ -42,34 +30,34 @@ def load_and_prepare_data():
     df = pd.read_csv(DATA_PATH)
     print(f"✅ Loaded {len(df)} records")
     
-    # Display dataset info
+    # dataset info
     print("\n📊 Dataset Columns:")
     print(df.columns.tolist())
     
-    # Clean column names (remove extra spaces)
+    # clean columns
     df.columns = df.columns.str.strip()
     
-    # Feature Engineering
+    # feature engineering
     print("\n🔧 Engineering features...")
     
-    # Extract hour from order time
+    # extract hour
     if 'Time_Orderd' in df.columns:
-        # Handle time format (HH:MM:SS or HH:MM)
+        # parse time
         df['Time_Orderd'] = df['Time_Orderd'].astype(str)
         df['hour_of_day'] = df['Time_Orderd'].apply(lambda x: int(x.split(':')[0]) if ':' in str(x) else 12)
     else:
         df['hour_of_day'] = 12  # Default to noon
     
-    # Create is_rush_hour feature
+    # rush hour
     df['is_rush_hour'] = df['hour_of_day'].apply(lambda x: 1 if x in [8, 9, 10, 17, 18, 19, 20] else 0)
     
-    # Create is_weekend feature (if date available)
+    # weekend flag
     df['is_weekend'] = 0  # Default to weekday
     
-    # Encode categorical variables
+    # encode categoricals
     encoders = {}
     
-    # Road traffic density
+    # traffic density
     if 'Road_traffic_density' in df.columns:
         df['Road_traffic_density'] = df['Road_traffic_density'].str.strip()
         traffic_map = {'Low': 1, 'Medium': 2, 'High': 3, 'Jam': 4}
@@ -77,7 +65,7 @@ def load_and_prepare_data():
     else:
         df['traffic_encoded'] = 2
     
-    # Weather conditions
+    # weather conditions
     if 'Weatherconditions' in df.columns:
         df['Weatherconditions'] = df['Weatherconditions'].str.strip().str.replace('conditions ', '')
         weather_map = {'Sunny': 1, 'Cloudy': 2, 'Windy': 2, 'Fog': 3, 'Sandstorms': 3, 'Stormy': 4}
@@ -85,14 +73,14 @@ def load_and_prepare_data():
     else:
         df['weather_encoded'] = 1
     
-    # Vehicle type
+    # vehicle type
     if 'Type_of_vehicle' in df.columns:
         vehicle_map = {'motorcycle': 1, 'scooter': 1, 'electric_scooter': 1, 'bicycle': 2}
         df['vehicle_encoded'] = df['Type_of_vehicle'].str.lower().map(vehicle_map).fillna(1)
     else:
         df['vehicle_encoded'] = 1
     
-    # Clean target variable (Time_taken)
+    # clean target
     target_col = None
     for col in df.columns:
         if 'time_taken' in col.lower() or 'timetaken' in col.lower():
@@ -103,13 +91,13 @@ def load_and_prepare_data():
         print("❌ Could not find target column (Time_taken)")
         return None, None, None
     
-    # Extract numeric value from target (e.g., "(min) 25" -> 25)
+    # extract numeric
     df['eta_minutes'] = df[target_col].astype(str).str.extract('(\d+)').astype(float)
     df = df.dropna(subset=['eta_minutes'])
     
-    # Clean distance column
+    # calc distance
     if 'Delivery_location_latitude' in df.columns and 'Restaurant_latitude' in df.columns:
-        # Calculate distance if coordinates available
+        # haversine distance
         from math import radians, cos, sin, sqrt, atan2
         
         def haversine(lat1, lon1, lat2, lon2):
@@ -126,15 +114,15 @@ def load_and_prepare_data():
             row['Delivery_location_latitude'], row['Delivery_location_longitude']
         ), axis=1)
     
-    # Select features for training
+    # select features
     feature_cols = ['distance', 'hour_of_day', 'is_rush_hour', 'traffic_encoded', 'weather_encoded', 'vehicle_encoded']
     
-    # Filter columns that exist
+    # filter available
     available_features = [col for col in feature_cols if col in df.columns]
     
     print(f"\n📋 Features used: {available_features}")
     
-    # Remove rows with missing values
+    # remove nulls
     df_clean = df[available_features + ['eta_minutes']].dropna()
     print(f"✅ Clean records: {len(df_clean)}")
     
@@ -145,17 +133,17 @@ def load_and_prepare_data():
 
 
 def train_model(X, y, feature_names):
-    """Train the ETA prediction model"""
+    """Train ETA model"""
     
     print("\n🎯 Training model...")
     
-    # Split data
+    # split data
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     
     print(f"   Training samples: {len(X_train)}")
     print(f"   Testing samples: {len(X_test)}")
     
-    # Train Random Forest
+    # train forest
     model = RandomForestRegressor(
         n_estimators=100,
         max_depth=15,
@@ -167,7 +155,7 @@ def train_model(X, y, feature_names):
     
     model.fit(X_train, y_train)
     
-    # Evaluate
+    # evaluate model
     y_pred = model.predict(X_test)
     
     mae = mean_absolute_error(y_test, y_pred)
@@ -179,11 +167,11 @@ def train_model(X, y, feature_names):
     print(f"   RMSE (Root Mean Square Error): {rmse:.2f} minutes")
     print(f"   R² Score: {r2:.4f}")
     
-    # Cross-validation
+    # cross validate
     cv_scores = cross_val_score(model, X, y, cv=5, scoring='neg_mean_absolute_error')
     print(f"   Cross-Validation MAE: {-cv_scores.mean():.2f} ± {cv_scores.std():.2f}")
     
-    # Feature importance
+    # feature importance
     print("\n🔍 Feature Importance:")
     importances = sorted(zip(feature_names, model.feature_importances_), key=lambda x: x[1], reverse=True)
     for feat, imp in importances:
@@ -193,11 +181,11 @@ def train_model(X, y, feature_names):
 
 
 def save_model(model, feature_names):
-    """Save the trained model and metadata"""
+    """Save trained model"""
     
     print("\n💾 Saving model...")
     
-    # Save model with metadata
+    # save with metadata
     model_data = {
         'model': model,
         'feature_names': feature_names,
@@ -207,7 +195,7 @@ def save_model(model, feature_names):
     joblib.dump(model_data, MODEL_PATH)
     print(f"✅ Model saved to {MODEL_PATH}")
     
-    # Print model size
+    # print size
     size_mb = os.path.getsize(MODEL_PATH) / (1024 * 1024)
     print(f"   Model size: {size_mb:.2f} MB")
 
@@ -217,16 +205,16 @@ def main():
     print("🚀 ETA Prediction Model Training")
     print("=" * 60)
     
-    # Load data
+    # load data
     X, y, feature_names = load_and_prepare_data()
     
     if X is None:
         return
     
-    # Train model
+    # train model
     model = train_model(X, y, feature_names)
     
-    # Save model
+    # save model
     save_model(model, feature_names)
     
     print("\n" + "=" * 60)

@@ -1,29 +1,17 @@
-/**
- * Phase-based ETA calculation
- * 
- * The ML model predicts travel time (pickup → delivery).
- * Total ETA includes processing phases before travel begins.
- * 
- * Status Flow: Pending → Confirmed → Picked Up → In Transit → Out for Delivery → Delivered
- */
+// phase-based ETA
 
-// Extra time (in minutes) added per phase before actual travel
+// phase buffers
 const PHASE_BUFFER = {
-    "Pending": 45,           // Waiting for confirmation + courier assignment
-    "Confirmed": 30,         // Courier being assigned + pickup scheduling
-    "Picked Up": 15,         // Courier organizing + heading to route
-    "In Transit": 5,         // Almost on final delivery leg
-    "Out for Delivery": 0,   // Pure ML travel time
+    "Pending": 45,
+    "Confirmed": 30,
+    "Picked Up": 15,
+    "In Transit": 5,
+    "Out for Delivery": 0,
     "Delivered": 0,
     "Cancelled": 0
 };
 
-/**
- * Get adjusted ETA based on order status
- * @param {number} etaMinutes - Raw ML predicted travel time in minutes
- * @param {string} status - Current order status
- * @returns {object} - { totalMinutes, formatted, label }
- */
+// get adjusted ETA
 export function getAdjustedETA(etaMinutes, status) {
     if (!etaMinutes || status === "Delivered" || status === "Cancelled") {
         return null;
@@ -39,11 +27,7 @@ export function getAdjustedETA(etaMinutes, status) {
     };
 }
 
-/**
- * Format minutes into readable string
- * @param {number} minutes 
- * @returns {string}
- */
+// format time
 export function formatETA(minutes) {
     if (minutes >= 60) {
         const hours = Math.floor(minutes / 60);
@@ -53,11 +37,7 @@ export function formatETA(minutes) {
     return `${minutes}m`;
 }
 
-/**
- * Get contextual label for ETA based on status
- * @param {string} status 
- * @returns {string}
- */
+// status label
 function getETALabel(status) {
     const labels = {
         "Pending": "Est. total time",

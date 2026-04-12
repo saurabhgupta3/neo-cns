@@ -9,7 +9,7 @@ export function AuthProvider({ children }) {
     const [token, setToken] = useState(localStorage.getItem("token"));
     const [loading, setLoading] = useState(true);
 
-    // Check if user is logged in on mount
+    // check auth
     useEffect(() => {
         const storedToken = localStorage.getItem("token");
         if (storedToken) {
@@ -19,7 +19,7 @@ export function AuthProvider({ children }) {
         }
     }, []);
 
-    // Fetch current user with token
+    // fetch user
     const fetchUser = async (authToken) => {
         try {
             const res = await fetch(`${API_URL}/auth/me`, {
@@ -33,7 +33,7 @@ export function AuthProvider({ children }) {
                 setUser(data.user);
                 setToken(authToken);
             } else {
-                // Token is invalid, clear it
+                // token invalid
                 logout();
             }
         } catch (error) {
@@ -44,7 +44,7 @@ export function AuthProvider({ children }) {
         }
     };
 
-    // Login function
+    // login handler
     const login = async (email, password) => {
         try {
             const res = await fetch(`${API_URL}/auth/login`, {
@@ -59,7 +59,7 @@ export function AuthProvider({ children }) {
                 throw new Error(data.message || "Login failed");
             }
 
-            // Save token and user
+            // persist session
             localStorage.setItem("token", data.token);
             setToken(data.token);
             setUser(data.user);
@@ -70,7 +70,7 @@ export function AuthProvider({ children }) {
         }
     };
 
-    // Register function
+    // register handler
     const register = async (name, email, password, phone, address) => {
         try {
             const res = await fetch(`${API_URL}/auth/register`, {
@@ -85,7 +85,7 @@ export function AuthProvider({ children }) {
                 throw new Error(data.message || "Registration failed");
             }
 
-            // Save token and user
+            // persist session
             localStorage.setItem("token", data.token);
             setToken(data.token);
             setUser(data.user);
@@ -96,14 +96,14 @@ export function AuthProvider({ children }) {
         }
     };
 
-    // Logout function
+    // logout handler
     const logout = () => {
         localStorage.removeItem("token");
         setToken(null);
         setUser(null);
     };
 
-    // Helper function to make authenticated API calls
+    // auth helper
     const authFetch = async (url, options = {}) => {
         const headers = {
             ...options.headers,
@@ -117,7 +117,7 @@ export function AuthProvider({ children }) {
 
         const res = await fetch(`${API_URL}${url}`, { ...options, headers });
 
-        // If unauthorized, logout
+        // handle unauthorized
         if (res.status === 401) {
             logout();
             throw new Error("Session expired. Please login again.");
@@ -144,7 +144,7 @@ export function AuthProvider({ children }) {
     );
 }
 
-// Custom hook to use auth context
+// auth hook
 export function useAuth() {
     const context = useContext(AuthContext);
     if (!context) {

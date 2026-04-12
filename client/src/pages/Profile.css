@@ -1,4 +1,4 @@
-/* ===== Profile Page Styles ===== */
+/* profile page */
 
 .profile-container {
   max-width: 800px;
@@ -174,7 +174,7 @@
   margin-bottom: 2rem;
 }
 
-/* Danger Zone Styles */
+/* danger zone */
 .danger-card {
   border-color: rgba(248, 113, 113, 0.15) !important;
 }
@@ -187,7 +187,7 @@
   color: #fca5a5 !important;
 }
 
-/* Delete Modal */
+/* delete modal */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -255,7 +255,7 @@
   color: var(--text-muted);
 }
 
-/* Courier Application Styles */
+/* courier app */
 .courier-card {
   border-color: rgba(52, 211, 153, 0.15) !important;
 }
@@ -306,7 +306,7 @@
   color: var(--text-primary);
 }
 
-/* Courier Modal */
+/* courier modal */
 .courier-modal {
   background: var(--bg-card);
   border: 1px solid var(--border-subtle);
@@ -359,3 +359,4 @@
   border-top: 1px solid var(--border-subtle);
   background: var(--bg-secondary);
 }
+

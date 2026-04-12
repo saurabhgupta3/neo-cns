@@ -19,12 +19,12 @@ export default function Chatbot() {
     const inputRef = useRef(null);
     const { authFetch, user } = useAuth();
 
-    // Auto-scroll to latest message
+    // auto scroll
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages, loading]);
 
-    // Focus input when chat opens
+    // focus input
     useEffect(() => {
         if (isOpen) {
             setTimeout(() => inputRef.current?.focus(), 300);
@@ -35,14 +35,14 @@ export default function Chatbot() {
         const userMessage = text || input.trim();
         if (!userMessage || loading) return;
 
-        // Add user message
+        // add message
         const newMessages = [...messages, { role: "user", content: userMessage }];
         setMessages(newMessages);
         setInput("");
         setLoading(true);
 
         try {
-            // Build history for context (last 10 messages)
+            // build history
             const history = newMessages.slice(-3).map(msg => ({
                 role: msg.role,
                 content: msg.content
@@ -85,7 +85,7 @@ export default function Chatbot() {
         }
     };
 
-    // Simple markdown to HTML (bold, lists)
+    // format markdown
     const formatMessage = (text) => {
         return text
             .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
@@ -93,15 +93,15 @@ export default function Chatbot() {
             .replace(/\n/g, "<br/>");
     };
 
-    // Don't show chatbot if not logged in
+    // require login
     if (!user) return null;
 
     return (
         <>
-            {/* Floating Chat Window */}
+            {/* chat window */}
             {isOpen && (
                 <div className="chatbot-window">
-                    {/* Header */}
+                    {/* chat header */}
                     <div className="chatbot-header">
                         <div className="chatbot-header-icon">🤖</div>
                         <div className="chatbot-header-info">
@@ -110,7 +110,7 @@ export default function Chatbot() {
                         </div>
                     </div>
 
-                    {/* Messages */}
+                    {/* message list */}
                     <div className="chatbot-messages">
                         {messages.length === 0 ? (
                             <div className="chat-welcome">
@@ -145,7 +145,7 @@ export default function Chatbot() {
                             ))
                         )}
 
-                        {/* Typing indicator */}
+                        {/* typing dots */}
                         {loading && (
                             <div className="chat-typing">
                                 <span></span>
@@ -157,7 +157,7 @@ export default function Chatbot() {
                         <div ref={messagesEndRef} />
                     </div>
 
-                    {/* Input */}
+                    {/* text input */}
                     <div className="chatbot-input">
                         <input
                             ref={inputRef}
@@ -178,7 +178,7 @@ export default function Chatbot() {
                 </div>
             )}
 
-            {/* Toggle Button */}
+            {/* toggle button */}
             <button
                 className={`chatbot-toggle ${isOpen ? "active" : ""}`}
                 onClick={() => setIsOpen(!isOpen)}

@@ -35,14 +35,14 @@ export default function Register() {
         setLoading(true);
         setError("");
 
-        // Validate passwords match
+        // check match
         if (formData.password !== formData.confirmPassword) {
             setError("Passwords do not match");
             setLoading(false);
             return;
         }
 
-        // Validate password length
+        // check length
         if (formData.password.length < 6) {
             setError("Password must be at least 6 characters");
             setLoading(false);

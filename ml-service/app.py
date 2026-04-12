@@ -1,17 +1,4 @@
-"""
-Neo-CNS ML Prediction API Server
-=================================
-Flask API that serves ML predictions for the Neo-CNS courier system.
-
-Endpoints:
-    POST /predict/eta   - Predict delivery time
-    POST /predict/fraud - Detect payment fraud
-    GET /health         - Health check
-    GET /model/info     - Model information
-
-Usage:
-    python app.py
-"""
+# ML prediction server
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -21,25 +8,25 @@ import os
 from datetime import datetime
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
+CORS(app)
 
-# Configuration
+# config paths
 MODEL_PATH = 'models/eta_model.pkl'
 FRAUD_MODEL_PATH = 'models/fraud_model.pkl'
 PORT = int(os.environ.get('ML_SERVICE_PORT', 5001))
 
-# ETA model
+# eta model
 model_data = None
 model = None
 feature_names = None
 
-# Fraud model
+# fraud model
 fraud_model_data = None
 fraud_model = None
 fraud_feature_names = None
 
 def load_model():
-    """Load the trained ETA model"""
+    """Load ETA model"""
     global model_data, model, feature_names
     
     if os.path.exists(MODEL_PATH):
@@ -55,7 +42,7 @@ def load_model():
         return False
 
 def load_fraud_model():
-    """Load the trained fraud detection model"""
+    """Load fraud model"""
     global fraud_model_data, fraud_model, fraud_feature_names
     
     if os.path.exists(FRAUD_MODEL_PATH):
@@ -71,65 +58,55 @@ def load_fraud_model():
         return False
 
 
-# Maximum distance (km) for which the ML model's predictions are reliable.
-# The model was trained on food delivery data (1-20 km range).
-# Beyond this threshold, we use a formula-based approach.
+# max reliable distance
 ML_MODEL_MAX_RELIABLE_DISTANCE = 50
 
 
 def calculate_fallback_eta(distance, hour_of_day, traffic_level=2):
-    """
-    Fallback ETA calculation when model is not available or distance
-    is outside the ML model's reliable range.
-    
-    Uses different speed assumptions based on distance:
-    - Short distance (≤ 20 km): city delivery at ~25 km/h
-    - Medium distance (20-100 km): mixed city/highway at ~40 km/h
-    - Long distance (100-500 km): mostly highway at ~55 km/h + rest stops
-    - Very long distance (> 500 km): highway at ~55 km/h + overnight/rest stops
-    """
+    """Fallback ETA calculation"""
+    # short city routes
     if distance <= 20:
-        # City delivery
+        # city delivery
         base_time = (distance / 25) * 60
     elif distance <= 100:
-        # City exit + suburban/highway
+        # suburban highway
         city_time = (20 / 25) * 60  # First 20 km in city
         highway_time = ((distance - 20) / 40) * 60
         base_time = city_time + highway_time
     elif distance <= 500:
-        # Long distance - highway speed with pickup/drop overhead
+        # long distance
         city_time = (20 / 25) * 60  # City portions
         highway_time = ((distance - 20) / 55) * 60
         rest_stops = (distance // 200) * 30  # 30 min rest every 200 km
         base_time = city_time + highway_time + rest_stops + 30  # +30 min for loading/unloading
     else:
-        # Very long distance (inter-state)
+        # very long
         city_time = (20 / 25) * 60
         highway_time = ((distance - 20) / 55) * 60
         rest_stops = (distance // 200) * 30
         overnight_stops = (distance // 700) * 480  # 8 hour overnight stop every 700 km
         base_time = city_time + highway_time + rest_stops + overnight_stops + 60  # +60 min handling
     
-    # Traffic factor (mainly affects city portion)
+    # traffic factor
     traffic_multiplier = {1: 0.9, 2: 1.0, 3: 1.15, 4: 1.3}
     if distance <= 50:
         base_time *= traffic_multiplier.get(traffic_level, 1.0)
     else:
-        # Traffic has less impact on long-distance (mostly highway)
+        # highway impact
         city_factor = traffic_multiplier.get(traffic_level, 1.0)
         base_time = base_time * 0.3 * city_factor + base_time * 0.7  # 30% city, 70% highway
     
-    # Rush hour factor (only significant for short distances)
+    # rush hour
     if hour_of_day in [8, 9, 10, 17, 18, 19, 20] and distance <= 50:
         base_time *= 1.2
     
-    # Minimum 15 minutes for any delivery
+    # minimum time
     return max(15, round(base_time))
 
 
 @app.route('/health', methods=['GET'])
 def health_check():
-    """Health check endpoint"""
+    """Health check"""
     return jsonify({
         'status': 'healthy',
         'eta_model_loaded': model is not None,
@@ -140,7 +117,7 @@ def health_check():
 
 @app.route('/model/info', methods=['GET'])
 def model_info():
-    """Get model information"""
+    """Model info"""
     if model_data is None:
         return jsonify({
             'success': False,
@@ -157,30 +134,7 @@ def model_info():
 
 @app.route('/predict/eta', methods=['POST'])
 def predict_eta():
-    """
-    Predict delivery ETA
-    
-    IMPORTANT: Distance must be PURE HAVERSINE (straight-line) distance,
-    NOT real road distance. This matches the training data which used Haversine.
-    
-    Request Body:
-    {
-        "distance": 15.5,          # Haversine distance in km (required)
-        "hour_of_day": 14,         # Hour of day 0-23 (optional, default: current hour)
-        "traffic_level": 2,        # Traffic 1-4: Low, Medium, High, Jam (optional, default: 2)
-        "weather": 1,              # Weather 1-4: Sunny, Cloudy, Rain, Storm (optional, default: 1)
-        "weight": 5                # Package weight in kg (optional, used for confidence)
-    }
-    
-    Response:
-    {
-        "success": true,
-        "eta_minutes": 45,
-        "eta_formatted": "45 minutes",
-        "confidence": 0.85,
-        "method": "ml_prediction"
-    }
-    """
+    """Predict delivery ETA"""
     try:
         data = request.get_json()
         
@@ -190,7 +144,7 @@ def predict_eta():
                 'message': 'No data provided'
             }), 400
         
-        # Extract and validate distance
+        # validate distance
         distance = data.get('distance')
         if distance is None:
             return jsonify({
@@ -205,21 +159,20 @@ def predict_eta():
                 'message': 'Distance must be positive'
             }), 400
         
-        # Get optional parameters with defaults
+        # optional params
         current_hour = datetime.now().hour
         hour_of_day = int(data.get('hour_of_day', current_hour))
         traffic_level = int(data.get('traffic_level', 2))
         weather = int(data.get('weather', 1))
         weight = float(data.get('weight', 1))
         
-        # Determine if rush hour
+        # rush hour
         is_rush_hour = 1 if hour_of_day in [8, 9, 10, 17, 18, 19, 20] else 0
         
-        # Use ML model if available
-        # Check if distance is within ML model's reliable range
+        # use ML model
         if model is not None and distance <= ML_MODEL_MAX_RELIABLE_DISTANCE:
             try:
-                # Build feature vector based on available features
+                # build features
                 feature_values = []
                 for feat in feature_names:
                     if feat == 'distance':
@@ -237,14 +190,14 @@ def predict_eta():
                     else:
                         feature_values.append(0)
                 
-                # Make prediction
+                # make prediction
                 features = np.array([feature_values])
                 eta_minutes = model.predict(features)[0]
                 
-                # Ensure reasonable bounds (10 min to 3 hours for short distances)
+                # clamp bounds
                 eta_minutes = max(10, min(eta_minutes, 180))
                 
-                # Calculate confidence based on feature availability
+                # confidence score
                 confidence = 0.85
                 
                 method = 'ml_prediction'
@@ -255,15 +208,14 @@ def predict_eta():
                 confidence = 0.6
                 method = 'fallback_formula'
         else:
-            # Distance is outside ML model's training range, or model not loaded
-            # Use distance-aware formula for reliable long-distance ETAs
+            # formula fallback
             if distance > ML_MODEL_MAX_RELIABLE_DISTANCE:
                 print(f"📏 Distance {distance:.1f} km exceeds ML model range ({ML_MODEL_MAX_RELIABLE_DISTANCE} km), using formula")
             eta_minutes = calculate_fallback_eta(distance, hour_of_day, traffic_level)
             confidence = 0.7 if distance <= 200 else 0.6
             method = 'distance_formula'
         
-        # Format ETA
+        # format ETA
         eta_minutes = round(eta_minutes)
         if eta_minutes >= 1440:  # 24 hours
             days = eta_minutes // 1440
@@ -308,32 +260,11 @@ def predict_eta():
         }), 500
 
 
-# ============================================================
-# FRAUD DETECTION ENDPOINT
-# ============================================================
+# fraud endpoint
 
 @app.route('/predict/fraud', methods=['POST'])
 def predict_fraud():
-    """
-    Predict fraud risk for a courier order.
-    
-    Request Body:
-    {
-        "amount": 4500,
-        "payment_type": "COD",
-        "hour": 3
-    }
-    
-    Response:
-    {
-        "success": true,
-        "risk_score": 0.78,
-        "is_fraud": true,
-        "risk_level": "high",
-        "fraud_flags": ["Unusual hour (3 AM)", "High amount"],
-        "method": "ml_prediction"
-    }
-    """
+    """Predict fraud risk"""
     try:
         data = request.get_json()
         
@@ -347,18 +278,18 @@ def predict_fraud():
         if amount <= 0:
             return jsonify({'success': False, 'message': 'Valid amount is required'}), 400
         
-        # Encode payment type to match training data
+        # encode payment
         payment_mapping = {'COD': 0, 'Prepaid': 1, 'Wallet': 2}
         type_encoded = payment_mapping.get(payment_type, 0)
         
-        # Calculate derived features
+        # derived features
         avg_amount = 180000  # From training data average
         amount_ratio = amount / avg_amount
         is_high_amount = 1 if amount > 2 * avg_amount else 0
         is_unusual_hour = 1 if 0 <= hour <= 5 else 0
         balance_change_ratio = min(amount / max(amount * 2, 1), 1.0)  # Approximate
         
-        # Prepare feature vector
+        # feature vector
         features = np.array([[
             amount,
             type_encoded,
@@ -369,7 +300,7 @@ def predict_fraud():
             balance_change_ratio
         ]])
         
-        # Generate fraud flags
+        # fraud flags
         fraud_flags = []
         if is_unusual_hour:
             fraud_flags.append(f"Unusual hour ({hour}:00 AM)")
@@ -381,7 +312,7 @@ def predict_fraud():
             fraud_flags.append(f"Amount {amount_ratio:.1f}x above average")
         
         if fraud_model is not None:
-            # ML Prediction
+            # ML prediction
             risk_score = float(fraud_model.predict_proba(features)[0][1])
             is_fraud = bool(risk_score > 0.5)
             method = 'ml_prediction'
@@ -390,7 +321,7 @@ def predict_fraud():
             print(f"   Risk Score: {risk_score:.4f}")
             print(f"   Flags: {fraud_flags}")
         else:
-            # Fallback rule-based scoring
+            # rule fallback
             risk_score = 0.0
             if is_unusual_hour:
                 risk_score += 0.25
@@ -407,7 +338,7 @@ def predict_fraud():
             print(f"\n🚨 Fraud Check (Rules): amount={amount}, type={payment_type}, hour={hour}")
             print(f"   Risk Score: {risk_score:.4f}")
         
-        # Determine risk level
+        # risk level
         if risk_score >= 0.6:
             risk_level = 'high'
         elif risk_score >= 0.3:
@@ -458,7 +389,7 @@ if __name__ == '__main__':
     print("🚀 Neo-CNS ML Prediction Service")
     print("=" * 60)
     
-    # Load models
+    # load models
     eta_loaded = load_model()
     fraud_loaded = load_fraud_model()
     

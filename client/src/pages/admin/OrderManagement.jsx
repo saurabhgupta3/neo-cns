@@ -28,14 +28,14 @@ export default function OrderManagement() {
 
     const fetchData = async () => {
         try {
-            // Fetch orders
+            // fetch orders
             const ordersRes = await authFetch("/orders");
             const ordersData = await ordersRes.json();
             if (ordersRes.ok) {
                 setOrders(ordersData.orders || []);
             }
 
-            // Fetch couriers
+            // fetch couriers
             const couriersRes = await authFetch("/users/couriers");
             const couriersData = await couriersRes.json();
             if (couriersRes.ok) {
@@ -104,7 +104,7 @@ export default function OrderManagement() {
         }
     };
 
-    // Filter orders
+    // filter orders
     const filteredOrders = orders.filter(order => {
         const matchesSearch =
             order.senderName?.toLowerCase().includes(search.toLowerCase()) ||
@@ -117,8 +117,8 @@ export default function OrderManagement() {
 
     if (loading) {
         return (
-            <div className="admin-container text-center py-5">
-                <div className="spinner-border text-primary" role="status">
+            <div className="admin-container admin-loading-state text-center py-5">
+                <div className="spinner-border" role="status">
                     <span className="visually-hidden">Loading...</span>
                 </div>
             </div>
@@ -127,21 +127,26 @@ export default function OrderManagement() {
 
     return (
         <div className="admin-container">
-            <h2 className="mb-4">
-                <FontAwesomeIcon icon={faBox} className="me-2" />
-                Order Management
-            </h2>
+            <header className="admin-page-head">
+                <div>
+                    <h1>
+                        <FontAwesomeIcon icon={faBox} className="me-2" aria-hidden />
+                        Order management
+                    </h1>
+                    <p className="admin-subtitle">Search, assign couriers, and update shipment status</p>
+                </div>
+            </header>
 
             {/* Search and Filter */}
             <div className="admin-search">
                 <div className="position-relative flex-grow-1">
-                    <FontAwesomeIcon icon={faSearch} className="position-absolute" style={{ left: '12px', top: '12px', color: '#999' }} />
+                    <FontAwesomeIcon icon={faSearch} className="admin-search-icon" aria-hidden />
                     <input
                         type="text"
-                        placeholder="Search by sender, receiver, or address..."
+                        className="admin-search-input w-100"
+                        placeholder="Search by sender, receiver, or address…"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        style={{ paddingLeft: '40px' }}
                     />
                 </div>
                 <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
@@ -154,12 +159,12 @@ export default function OrderManagement() {
 
             {/* Orders Table */}
             <div className="admin-card">
-                <div className="admin-card-body" style={{ overflowX: 'auto' }}>
+                <div className="admin-card-body admin-table-wrap">
                     <table className="admin-table">
                         <thead>
                             <tr>
-                                <th>Order</th>
-                                <th>Route</th>
+                                <th>Parties</th>
+                                <th>Addresses</th>
                                 <th>Status</th>
                                 <th>ETA</th>
                                 <th>Risk</th>
@@ -179,16 +184,40 @@ export default function OrderManagement() {
                                 filteredOrders.map(order => (
                                     <tr key={order._id}>
                                         <td>
-                                            <strong>{order.senderName}</strong>
-                                            <br />
-                                            <small className="text-muted">→ {order.receiverName}</small>
+                                            <div className="admin-party-stack">
+                                                <div className="admin-party-row">
+                                                    <span className="admin-party-label">From</span>
+                                                    <span className="admin-party-value">{order.senderName}</span>
+                                                </div>
+                                                <div className="admin-party-row">
+                                                    <span className="admin-party-label">To</span>
+                                                    <span className="admin-party-value">{order.receiverName}</span>
+                                                </div>
+                                            </div>
                                         </td>
                                         <td>
-                                            <small>
-                                                {order.pickupAddress?.substring(0, 20)}...
-                                                <br />
-                                                → {order.deliveryAddress?.substring(0, 20)}...
-                                            </small>
+                                            <div className="admin-party-stack admin-address-block">
+                                                <div className="admin-party-row">
+                                                    <span className="admin-party-label">Pickup</span>
+                                                    <span className="admin-party-value" title={order.pickupAddress}>
+                                                        {order.pickupAddress
+                                                            ? (order.pickupAddress.length > 48
+                                                                ? `${order.pickupAddress.slice(0, 48)}…`
+                                                                : order.pickupAddress)
+                                                            : "—"}
+                                                    </span>
+                                                </div>
+                                                <div className="admin-party-row">
+                                                    <span className="admin-party-label">Delivery</span>
+                                                    <span className="admin-party-value" title={order.deliveryAddress}>
+                                                        {order.deliveryAddress
+                                                            ? (order.deliveryAddress.length > 48
+                                                                ? `${order.deliveryAddress.slice(0, 48)}…`
+                                                                : order.deliveryAddress)
+                                                            : "—"}
+                                                    </span>
+                                                </div>
+                                            </div>
                                         </td>
                                         <td>
                                             <span className={`status-badge ${order.status.toLowerCase().replace(' ', '-')}`}>
@@ -198,31 +227,29 @@ export default function OrderManagement() {
                                         <td>
                                             {(() => {
                                                 const eta = getAdjustedETA(order.etaMinutes, order.status);
-                                                if (order.status === "Delivered") return <span className="text-success">Delivered</span>;
-                                                if (order.status === "Cancelled") return <span className="text-muted">—</span>;
+                                                if (order.status === "Delivered") return <span className="admin-text-done">Delivered</span>;
+                                                if (order.status === "Cancelled") return <span className="admin-text-muted">—</span>;
                                                 return eta ? (
                                                     <span title={eta.label}>
                                                         {eta.formatted}
                                                         <br />
-                                                        <small className="text-muted">{eta.label}</small>
+                                                        <span className="admin-eta-sub">{eta.label}</span>
                                                     </span>
                                                 ) : (
-                                                    <span className="text-muted">—</span>
+                                                    <span className="admin-text-muted">—</span>
                                                 );
                                             })()}
                                         </td>
                                         <td>
                                             {(() => {
                                                 const score = order.riskScore || 0;
-                                                const level = score >= 0.6 ? 'high' : score >= 0.3 ? 'medium' : 'low';
-                                                const badgeClass = level === 'high' ? 'bg-danger' : level === 'medium' ? 'bg-warning text-dark' : 'bg-success';
-                                                const icon = level === 'high' ? '🔴' : level === 'medium' ? '🟡' : '🟢';
+                                                const level = score >= 0.6 ? "high" : score >= 0.3 ? "medium" : "low";
                                                 return (
                                                     <span
-                                                        className={`badge ${badgeClass}`}
-                                                        title={order.fraudFlags?.length ? order.fraudFlags.join(', ') : 'No flags'}
+                                                        className={`risk-pill risk-pill--${level}`}
+                                                        title={order.fraudFlags?.length ? order.fraudFlags.join(", ") : "No flags"}
                                                     >
-                                                        {icon} {level.toUpperCase()}
+                                                        {level.charAt(0).toUpperCase() + level.slice(1)}
                                                     </span>
                                                 );
                                             })()}
@@ -230,12 +257,12 @@ export default function OrderManagement() {
                                         <td>₹{order.price?.toLocaleString()}</td>
                                         <td>
                                             {order.courier ? (
-                                                <span className="text-success">
-                                                    <FontAwesomeIcon icon={faTruck} className="me-1" />
+                                                <span className="admin-courier-name">
+                                                    <FontAwesomeIcon icon={faTruck} className="me-1" aria-hidden />
                                                     {order.courier.name}
                                                 </span>
                                             ) : (
-                                                <span className="text-muted">Unassigned</span>
+                                                <span className="admin-text-muted">Unassigned</span>
                                             )}
                                         </td>
                                         <td>
@@ -281,9 +308,18 @@ export default function OrderManagement() {
                                 &times;
                             </button>
                         </div>
-                        <p className="text-muted mb-3">
-                            Order: {assignModal.order?.senderName} → {assignModal.order?.receiverName}
-                        </p>
+                        <div className="modal-party-summary">
+                            <div className="admin-party-stack">
+                                <div className="admin-party-row">
+                                    <span className="admin-party-label">From</span>
+                                    <span className="admin-party-value">{assignModal.order?.senderName}</span>
+                                </div>
+                                <div className="admin-party-row">
+                                    <span className="admin-party-label">To</span>
+                                    <span className="admin-party-value">{assignModal.order?.receiverName}</span>
+                                </div>
+                            </div>
+                        </div>
                         <form onSubmit={handleAssignCourier}>
                             <div className="mb-3">
                                 <label className="form-label">Select Courier</label>
@@ -331,9 +367,18 @@ export default function OrderManagement() {
                                 &times;
                             </button>
                         </div>
-                        <p className="text-muted mb-3">
-                            Order: {statusModal.order?.senderName} → {statusModal.order?.receiverName}
-                        </p>
+                        <div className="modal-party-summary">
+                            <div className="admin-party-stack">
+                                <div className="admin-party-row">
+                                    <span className="admin-party-label">From</span>
+                                    <span className="admin-party-value">{statusModal.order?.senderName}</span>
+                                </div>
+                                <div className="admin-party-row">
+                                    <span className="admin-party-label">To</span>
+                                    <span className="admin-party-value">{statusModal.order?.receiverName}</span>
+                                </div>
+                            </div>
+                        </div>
                         <form onSubmit={handleUpdateStatus}>
                             <div className="mb-3">
                                 <label className="form-label">New Status</label>

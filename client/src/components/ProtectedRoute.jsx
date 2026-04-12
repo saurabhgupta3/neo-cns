@@ -1,12 +1,12 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
-// Protects routes that require authentication
+// auth guard
 export function ProtectedRoute({ children, allowedRoles }) {
     const { isAuthenticated, user, loading } = useAuth();
     const location = useLocation();
 
-    // Show loading while checking auth
+    // show spinner
     if (loading) {
         return (
             <div className="d-flex justify-content-center align-items-center" style={{ minHeight: "50vh" }}>
@@ -17,12 +17,12 @@ export function ProtectedRoute({ children, allowedRoles }) {
         );
     }
 
-    // Not logged in - redirect to login
+    // redirect login
     if (!isAuthenticated) {
         return <Navigate to="/login" state={{ from: location }} replace />;
     }
 
-    // Check role-based access
+    // check role
     if (allowedRoles && !allowedRoles.includes(user.role)) {
         return <Navigate to="/unauthorized" replace />;
     }
@@ -30,7 +30,7 @@ export function ProtectedRoute({ children, allowedRoles }) {
     return children;
 }
 
-// Redirects logged-in users away from login/register pages
+// redirect authenticated
 export function PublicRoute({ children }) {
     const { isAuthenticated, loading } = useAuth();
 

@@ -23,17 +23,17 @@ export default function AdminDashboard() {
 
     const fetchDashboardData = async () => {
         try {
-            // Fetch orders
+            // fetch orders
             const ordersRes = await authFetch("/orders");
             const ordersData = await ordersRes.json();
             const orders = ordersData.orders || [];
 
-            // Fetch users
+            // fetch users
             const usersRes = await authFetch("/users");
             const usersData = await usersRes.json();
             const users = usersData.users || [];
 
-            // Calculate stats
+            // calc stats
             const couriers = users.filter(u => u.role === "courier");
             const pendingOrders = orders.filter(o => o.status === "Pending");
 
@@ -44,7 +44,7 @@ export default function AdminDashboard() {
                 pendingOrders: pendingOrders.length
             });
 
-            // Get recent items (last 5)
+            // recent items
             setRecentOrders(orders.slice(0, 5));
             setRecentUsers(users.slice(0, 5));
 
@@ -57,8 +57,8 @@ export default function AdminDashboard() {
 
     if (loading) {
         return (
-            <div className="admin-container text-center py-5">
-                <div className="spinner-border text-primary" role="status">
+            <div className="admin-container admin-loading-state text-center py-5">
+                <div className="spinner-border" role="status">
                     <span className="visually-hidden">Loading...</span>
                 </div>
             </div>
@@ -67,17 +67,20 @@ export default function AdminDashboard() {
 
     return (
         <div className="admin-container">
-            <div className="d-flex justify-content-between align-items-center mb-4">
-                <h2>Admin Dashboard</h2>
+            <header className="admin-page-head">
+                <div>
+                    <h1>Admin Dashboard</h1>
+                    <p className="admin-subtitle">Overview of users, orders, and operations</p>
+                </div>
                 <div className="quick-actions">
                     <Link to="/admin/users" className="quick-action-btn primary">
-                        <FontAwesomeIcon icon={faUsers} /> Manage Users
+                        <FontAwesomeIcon icon={faUsers} /> Manage users
                     </Link>
                     <Link to="/admin/orders" className="quick-action-btn secondary">
-                        <FontAwesomeIcon icon={faBox} /> Manage Orders
+                        <FontAwesomeIcon icon={faBox} /> Manage orders
                     </Link>
                 </div>
-            </div>
+            </header>
 
             {/* Stats Grid */}
             <div className="stats-grid">
@@ -128,9 +131,9 @@ export default function AdminDashboard() {
                 <div className="col-lg-6">
                     <div className="admin-card">
                         <div className="admin-card-header">
-                            <h5>Recent Orders</h5>
-                            <Link to="/admin/orders" className="text-white text-decoration-none">
-                                View All <FontAwesomeIcon icon={faArrowRight} />
+                            <h5>Recent orders</h5>
+                            <Link to="/admin/orders" className="admin-card-link">
+                                View all <FontAwesomeIcon icon={faArrowRight} />
                             </Link>
                         </div>
                         <div className="admin-card-body">
@@ -140,7 +143,7 @@ export default function AdminDashboard() {
                                 <table className="admin-table">
                                     <thead>
                                         <tr>
-                                            <th>Sender → Receiver</th>
+                                            <th>Parties</th>
                                             <th>Status</th>
                                             <th>Price</th>
                                         </tr>
@@ -149,8 +152,17 @@ export default function AdminDashboard() {
                                         {recentOrders.map(order => (
                                             <tr key={order._id}>
                                                 <td>
-                                                    <Link to={`/orders/${order._id}`} className="text-decoration-none">
-                                                        {order.senderName} → {order.receiverName}
+                                                    <Link to={`/orders/${order._id}`} className="admin-order-parties-link">
+                                                        <div className="admin-party-stack">
+                                                            <div className="admin-party-row">
+                                                                <span className="admin-party-label">From</span>
+                                                                <span className="admin-party-value">{order.senderName}</span>
+                                                            </div>
+                                                            <div className="admin-party-row">
+                                                                <span className="admin-party-label">To</span>
+                                                                <span className="admin-party-value">{order.receiverName}</span>
+                                                            </div>
+                                                        </div>
                                                     </Link>
                                                 </td>
                                                 <td>
@@ -172,9 +184,9 @@ export default function AdminDashboard() {
                 <div className="col-lg-6">
                     <div className="admin-card">
                         <div className="admin-card-header">
-                            <h5>Recent Users</h5>
-                            <Link to="/admin/users" className="text-white text-decoration-none">
-                                View All <FontAwesomeIcon icon={faArrowRight} />
+                            <h5>Recent users</h5>
+                            <Link to="/admin/users" className="admin-card-link">
+                                View all <FontAwesomeIcon icon={faArrowRight} />
                             </Link>
                         </div>
                         <div className="admin-card-body">

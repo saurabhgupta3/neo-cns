@@ -15,7 +15,7 @@ export default function ResetPassword() {
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
 
-    // Password strength checker
+    // strength checker
     const getPasswordStrength = (pass) => {
         let strength = 0;
         if (pass.length >= 6) strength++;

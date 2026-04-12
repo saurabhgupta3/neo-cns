@@ -22,7 +22,7 @@ const userSchema = new Schema({
         type: String,
         required: [true, "Password is required"],
         minlength: [6, "Password must be at least 6 characters"],
-        select: false // Don't include password in queries by default
+        select: false
     },
     phone: {
         type: String,
@@ -38,7 +38,7 @@ const userSchema = new Schema({
         type: String,
         trim: true
     },
-    // For couriers - tracking their availability and current location
+    // courier tracking
     isAvailable: {
         type: Boolean,
         default: true
@@ -47,17 +47,17 @@ const userSchema = new Schema({
         lat: Number,
         lng: Number
     },
-    // Account status
+    // account status
     isActive: {
         type: Boolean,
         default: true
     },
-    // Soft delete - when set, user is considered deleted
+    // soft delete
     deletedAt: {
         type: Date,
         default: null
     },
-    // Password reset
+    // password reset
     resetPasswordToken: {
         type: String,
         select: false
@@ -76,9 +76,9 @@ const userSchema = new Schema({
     }
 });
 
-// Hash password before saving
+// hash password
 userSchema.pre("save", async function(next) {
-    // Only hash if password is modified
+    // skip unmodified
     if (!this.isModified("password")) {
         return next();
     }
@@ -88,18 +88,18 @@ userSchema.pre("save", async function(next) {
     next();
 });
 
-// Update the updatedAt timestamp
+// update timestamp
 userSchema.pre("save", function(next) {
     this.updatedAt = Date.now();
     next();
 });
 
-// Compare password method
+// compare password
 userSchema.methods.comparePassword = async function(candidatePassword) {
     return await bcrypt.compare(candidatePassword, this.password);
 };
 
-// Remove sensitive data when converting to JSON
+// sanitize JSON
 userSchema.methods.toJSON = function() {
     const user = this.toObject();
     delete user.password;

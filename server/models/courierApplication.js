@@ -2,14 +2,14 @@ const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
 const courierApplicationSchema = new Schema({
-    // Applicant (user applying to become courier)
+    // applicant ref
     user: {
         type: Schema.Types.ObjectId,
         ref: "User",
         required: true
     },
     
-    // Application Details
+    // app details
     vehicleType: {
         type: String,
         enum: ["bicycle", "motorcycle", "car", "van", "truck"],
@@ -30,32 +30,32 @@ const courierApplicationSchema = new Schema({
         required: [true, "Experience is required"]
     },
     
-    // Availability
+    // availability
     workHours: {
         type: String,
         enum: ["full-time", "part-time", "weekends", "flexible"],
         required: [true, "Preferred work hours is required"]
     },
     
-    // Additional info
+    // extra info
     motivation: {
         type: String,
         maxlength: [500, "Motivation cannot exceed 500 characters"]
     },
     
-    // Application Status
+    // app status
     status: {
         type: String,
         enum: ["pending", "approved", "rejected"],
         default: "pending"
     },
     
-    // Admin notes (visible only to admin)
+    // admin notes
     adminNotes: {
         type: String
     },
     
-    // Who reviewed the application
+    // reviewer info
     reviewedBy: {
         type: Schema.Types.ObjectId,
         ref: "User"
@@ -70,7 +70,7 @@ const courierApplicationSchema = new Schema({
     }
 });
 
-// Prevent multiple pending applications from same user
+// unique pending index
 courierApplicationSchema.index(
     { user: 1, status: 1 }, 
     { 

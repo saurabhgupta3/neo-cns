@@ -47,7 +47,7 @@ export default function Profile() {
                 phone: user.phone || "",
                 address: user.address || ""
             });
-            // Fetch user's courier applications
+            // load applications
             if (user.role === "user") {
                 fetchMyApplications();
             }
@@ -94,7 +94,7 @@ export default function Profile() {
             if (res.ok) {
                 toast.success("Profile updated successfully!");
                 setIsEditing(false);
-                // Refresh page to update context
+                // refresh page
                 window.location.reload();
             } else {
                 toast.error(data.message || "Failed to update profile");
@@ -215,7 +215,7 @@ export default function Profile() {
 
     return (
         <div className="profile-container">
-            {/* Profile Header */}
+            {/* profile header */}
             <div className="profile-header">
                 <div className="profile-avatar">
                     {getInitials(user.name)}
@@ -224,7 +224,7 @@ export default function Profile() {
                 <span className={`role-badge ${user.role}`}>{user.role}</span>
             </div>
 
-            {/* Profile Info Card */}
+            {/* profile card */}
             <div className="profile-card">
                 <div className="profile-card-header">
                     <h5>
@@ -339,7 +339,7 @@ export default function Profile() {
                 </div>
             </div>
 
-            {/* Change Password Card */}
+            {/* password card */}
             <div className="profile-card">
                 <div className="profile-card-header">
                     <h5>
@@ -431,7 +431,7 @@ export default function Profile() {
                 </div>
             </div>
 
-            {/* Member Since */}
+            {/* member date */}
             <div className="member-since">
                 Member since {new Date(user.createdAt).toLocaleDateString('en-US', {
                     year: 'numeric',
@@ -440,7 +440,7 @@ export default function Profile() {
                 })}
             </div>
 
-            {/* Become a Courier Card - Only for regular users */}
+            {/* courier card */}
             {user.role === "user" && (
                 <div className="profile-card courier-card">
                     <div className="profile-card-header courier-header">
@@ -504,7 +504,7 @@ export default function Profile() {
                 </div>
             )}
 
-            {/* Courier Application Modal */}
+            {/* courier modal */}
             {showCourierModal && (
                 <div className="modal-overlay" onClick={() => setShowCourierModal(false)}>
                     <div className="courier-modal" onClick={e => e.stopPropagation()}>
@@ -626,7 +626,7 @@ export default function Profile() {
                 </div>
             )}
 
-            {/* Delete Account Card */}
+            {/* delete card */}
             <div className="profile-card danger-card">
                 <div className="profile-card-header danger-header">
                     <h5>
@@ -652,7 +652,7 @@ export default function Profile() {
                 </div>
             </div>
 
-            {/* Delete Confirmation Modal */}
+            {/* delete modal */}
             {showDeleteModal && (
                 <div className="modal-overlay" onClick={() => setShowDeleteModal(false)}>
                     <div className="delete-modal" onClick={e => e.stopPropagation()}>

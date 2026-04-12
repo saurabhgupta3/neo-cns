@@ -4,8 +4,171 @@ import { useAuth } from "../../context/AuthContext";
 import { getAdjustedETA } from "../../utils/etaHelper";
 import { toast } from "react-toastify";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft, faEdit, faTrash, faHistory } from "@fortawesome/free-solid-svg-icons";
+import { faArrowLeft, faEdit, faTrash, faHistory, faMapMarkerAlt } from "@fortawesome/free-solid-svg-icons";
+import { MapContainer, TileLayer, Marker, Popup, Polyline } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 import "./Orders.css";
+
+const pickupIcon = new L.DivIcon({
+    className: "map-marker-custom",
+    html: `<div class="map-pin pickup-pin"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="#6c5ce7"/><circle cx="12" cy="9" r="3" fill="white"/></svg></div>`,
+    iconSize: [24, 36],
+    iconAnchor: [12, 36],
+    popupAnchor: [0, -36]
+});
+
+const deliveryIcon = new L.DivIcon({
+    className: "map-marker-custom",
+    html: `<div class="map-pin delivery-pin"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="#00cec9"/><circle cx="12" cy="9" r="3" fill="white"/></svg></div>`,
+    iconSize: [24, 36],
+    iconAnchor: [12, 36],
+    popupAnchor: [0, -36]
+});
+
+const ALL_STATUSES = ["Pending", "Confirmed", "Picked Up", "In Transit", "Out for Delivery", "Delivered"];
+
+function getStatusIndex(status) {
+    if (status === "Cancelled") return -1;
+    return ALL_STATUSES.indexOf(status);
+}
+
+function StatusTimeline({ currentStatus, statusHistory }) {
+    const currentIdx = getStatusIndex(currentStatus);
+    const isCancelled = currentStatus === "Cancelled";
+
+    const getTimestamp = (status) => {
+        const entry = statusHistory?.find(h => h.status === status);
+        return entry ? new Date(entry.timestamp).toLocaleString('en-IN', {
+            day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+        }) : null;
+    };
+
+    return (
+        <div className="timeline-container">
+            <div className="timeline-track">
+                <div
+                    className={`timeline-progress ${isCancelled ? 'cancelled' : ''}`}
+                    style={{
+                        width: isCancelled
+                            ? '0%'
+                            : `${(currentIdx / (ALL_STATUSES.length - 1)) * 100}%`
+                    }}
+                />
+            </div>
+            <div className="timeline-steps">
+                {ALL_STATUSES.map((status, idx) => {
+                    const isCompleted = !isCancelled && idx <= currentIdx;
+                    const isCurrent = !isCancelled && idx === currentIdx;
+                    const timestamp = getTimestamp(status);
+                    return (
+                        <div
+                            key={status}
+                            className={`timeline-step ${isCompleted ? 'completed' : ''} ${isCurrent ? 'current' : ''}`}
+                        >
+                            <div className="timeline-dot">
+                                {isCompleted && (
+                                    <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                                        <path d="M2 6l3 3 5-5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                )}
+                            </div>
+                            <span className="timeline-label">{status}</span>
+                            {timestamp && (
+                                <span className="timeline-time">{timestamp}</span>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+            {isCancelled && (
+                <div className="timeline-cancelled">
+                    <span className="status-pill cancelled" style={{ fontSize: '0.8rem' }}>
+                        Order Cancelled
+                    </span>
+                </div>
+            )}
+        </div>
+    );
+}
+
+function OrderMap({ pickupCoords, deliveryCoords, pickupAddress, deliveryAddress }) {
+    if (!pickupCoords?.lat || !deliveryCoords?.lat) return null;
+
+    const pickupPos = [pickupCoords.lat, pickupCoords.lng];
+    const deliveryPos = [deliveryCoords.lat, deliveryCoords.lng];
+
+    const centerLat = (pickupCoords.lat + deliveryCoords.lat) / 2;
+    const centerLng = (pickupCoords.lng + deliveryCoords.lng) / 2;
+
+    const latDiff = Math.abs(pickupCoords.lat - deliveryCoords.lat);
+    const lngDiff = Math.abs(pickupCoords.lng - deliveryCoords.lng);
+    const maxDiff = Math.max(latDiff, lngDiff);
+    let zoom = 12;
+    if (maxDiff > 5) zoom = 6;
+    else if (maxDiff > 2) zoom = 7;
+    else if (maxDiff > 1) zoom = 8;
+    else if (maxDiff > 0.5) zoom = 9;
+    else if (maxDiff > 0.2) zoom = 10;
+    else if (maxDiff > 0.1) zoom = 11;
+
+    return (
+        <div className="order-map-card">
+            <div className="order-map-header">
+                <FontAwesomeIcon icon={faMapMarkerAlt} />
+                Route Map
+            </div>
+            <div className="order-map-wrapper">
+                <MapContainer
+                    center={[centerLat, centerLng]}
+                    zoom={zoom}
+                    scrollWheelZoom={false}
+                    style={{ height: '100%', width: '100%', borderRadius: '0 0 var(--radius-lg) var(--radius-lg)' }}
+                    attributionControl={false}
+                >
+                    <TileLayer
+                        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                    />
+                    <Marker position={pickupPos} icon={pickupIcon}>
+                        <Popup>
+                            <div style={{ color: '#333', fontWeight: 500 }}>
+                                <strong style={{ color: '#6c5ce7' }}>📦 Pickup</strong><br />
+                                {pickupAddress}
+                            </div>
+                        </Popup>
+                    </Marker>
+                    <Marker position={deliveryPos} icon={deliveryIcon}>
+                        <Popup>
+                            <div style={{ color: '#333', fontWeight: 500 }}>
+                                <strong style={{ color: '#00cec9' }}>📍 Delivery</strong><br />
+                                {deliveryAddress}
+                            </div>
+                        </Popup>
+                    </Marker>
+                    <Polyline
+                        positions={[pickupPos, deliveryPos]}
+                        pathOptions={{
+                            color: '#6c5ce7',
+                            weight: 3,
+                            opacity: 0.7,
+                            dashArray: '10, 8'
+                        }}
+                    />
+                </MapContainer>
+            </div>
+            <div className="order-map-legend">
+                <div className="legend-item">
+                    <span className="legend-dot" style={{ background: '#6c5ce7' }}></span>
+                    Pickup: {pickupAddress}
+                </div>
+                <div className="legend-item">
+                    <span className="legend-dot" style={{ background: '#00cec9' }}></span>
+                    Delivery: {deliveryAddress}
+                </div>
+            </div>
+        </div>
+    );
+}
 
 export default function OrderDetails() {
     const { id } = useParams();
@@ -84,7 +247,7 @@ export default function OrderDetails() {
     const statusClass = order.status.toLowerCase().replace(/\s+/g, '-');
 
     return (
-        <div className="order-form-container">
+        <div className="order-form-container" style={{ maxWidth: '900px' }}>
             <div className="order-form-header">
                 <h3>Order Details</h3>
                 <Link to="/orders" className="btn btn-outline-secondary">
@@ -92,6 +255,12 @@ export default function OrderDetails() {
                     Back to Orders
                 </Link>
             </div>
+
+            {/* status timeline */}
+            <StatusTimeline
+                currentStatus={order.status}
+                statusHistory={order.statusHistory}
+            />
 
             <div className="order-detail-card">
                 <div className="order-detail-header">
@@ -222,6 +391,15 @@ export default function OrderDetails() {
                 )}
             </div>
 
+            {/* route map */}
+            <OrderMap
+                pickupCoords={order.pickupCoordinates}
+                deliveryCoords={order.deliveryCoordinates}
+                pickupAddress={order.pickupAddress}
+                deliveryAddress={order.deliveryAddress}
+            />
+
+            {/* status history */}
             {order.statusHistory && order.statusHistory.length > 0 && (
                 <div className="status-history-card">
                     <div className="status-history-header">

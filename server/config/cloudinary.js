@@ -1,42 +1,37 @@
-/**
- * Cloudinary Configuration for Image Upload
- * 
- * Get your free API keys from: https://cloudinary.com/
- * Free tier includes: 25 GB storage, 25 GB bandwidth/month
- */
+// cloudinary config setup
 
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const multer = require('multer');
 
-// Configure Cloudinary
+// init cloudinary
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
     api_key: process.env.CLOUDINARY_API_KEY,
     api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// Configure Cloudinary Storage for Multer
+// storage config
 const storage = new CloudinaryStorage({
     cloudinary: cloudinary,
     params: {
-        folder: 'neo-cns/orders', // Folder in Cloudinary
+        folder: 'neo-cns/orders',
         allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
         transformation: [
-            { width: 800, height: 600, crop: 'limit' }, // Resize to max 800x600
-            { quality: 'auto' } // Auto optimize quality
+            { width: 800, height: 600, crop: 'limit' },
+            { quality: 'auto' }
         ]
     }
 });
 
-// Create multer upload middleware
+// upload middleware
 const upload = multer({
     storage: storage,
     limits: {
-        fileSize: 5 * 1024 * 1024 // 5 MB max file size
+        fileSize: 5 * 1024 * 1024
     },
     fileFilter: (req, file, cb) => {
-        // Check file type
+        // validate type
         const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
         if (allowedTypes.includes(file.mimetype)) {
             cb(null, true);
@@ -46,22 +41,21 @@ const upload = multer({
     }
 });
 
-// Delete image from Cloudinary
+// delete image
 const deleteImage = async (imageUrl) => {
     try {
         if (!imageUrl || !imageUrl.includes('cloudinary')) {
             return { success: true, message: 'No Cloudinary image to delete' };
         }
         
-        // Extract public_id from URL
-        // URL format: https://res.cloudinary.com/[cloud_name]/image/upload/v[version]/[folder]/[filename].[ext]
+        // extract publicId
         const urlParts = imageUrl.split('/');
         const uploadIndex = urlParts.indexOf('upload');
         if (uploadIndex === -1) return { success: false };
         
-        // Get everything after 'upload/v[version]/'
+        // parse path
         const publicIdWithExt = urlParts.slice(uploadIndex + 2).join('/');
-        const publicId = publicIdWithExt.replace(/\.[^/.]+$/, ''); // Remove extension
+        const publicId = publicIdWithExt.replace(/\.[^/.]+$/, '');
         
         const result = await cloudinary.uploader.destroy(publicId);
         console.log(`🗑️ Deleted image: ${publicId}`, result);

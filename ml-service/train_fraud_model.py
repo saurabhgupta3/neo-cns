@@ -1,27 +1,4 @@
-"""
-Fraud Detection Model Training Script
-======================================
-Trains a Random Forest Classifier on real-world payment fraud data from Kaggle.
-
-Dataset: Online Payments Fraud Detection Dataset
-Source:  https://www.kaggle.com/datasets/rupakroy/online-payments-fraud-detection-dataset
-File:   onlinefraud.csv (or PS_20174392719_1491204439457_log.csv)
-
-Features used for training (mapped to courier app context):
-    - amount       → Order price
-    - type_encoded → Payment method (COD=0, Prepaid=1, Wallet=2)
-    - hour         → Hour of order creation (0-23)
-    - amount_ratio → How much this amount deviates from average
-    - is_high_amount → 1 if amount > 2x average
-    - is_unusual_hour → 1 if order placed between 0-5 AM
-
-Target:
-    - isFraud (0 or 1)
-
-Usage:
-    1. Download dataset from Kaggle and place in D:/code/Projects/ml-data/onlinefraud.csv
-    2. Run: python train_fraud_model.py
-"""
+# fraud model training
 
 import pandas as pd
 import numpy as np
@@ -34,13 +11,13 @@ import os
 import warnings
 warnings.filterwarnings('ignore')
 
-# Paths
+# file paths
 DATA_PATH = 'D:/code/Projects/ml-data/onlinefraud.csv'
 MODEL_PATH = 'models/fraud_model.pkl'
 
 
 def load_and_prepare_data():
-    """Load and preprocess the Kaggle fraud dataset"""
+    """Prepare fraud dataset"""
     
     print("=" * 60)
     print("📊 Loading Fraud Detection Dataset")
@@ -54,19 +31,17 @@ def load_and_prepare_data():
         print(f"   3. Place it in: D:/code/Projects/ml-data/onlinefraud.csv")
         return None, None, None
     
-    # Load dataset
+    # load dataset
     df = pd.read_csv(DATA_PATH)
     print(f"\n✅ Dataset loaded: {len(df)} records")
     print(f"   Columns: {list(df.columns)}")
     print(f"   Fraud cases: {df['isFraud'].sum()} ({(df['isFraud'].mean()*100):.2f}%)")
     print(f"   Normal cases: {(df['isFraud'] == 0).sum()}")
     
-    # --- Feature Engineering ---
+    # feature engineering
     print("\n🔧 Engineering features for courier app context...")
     
-    # 1. Encode transaction type → maps to payment method
-    #    CASH_OUT → COD (0), PAYMENT → Prepaid (1), TRANSFER → Wallet (2)
-    #    DEBIT → Prepaid (1), CASH_IN → COD (0)
+    # encode type
     type_mapping = {
         'CASH_OUT': 0,   # Similar to COD
         'CASH_IN': 0,    # Similar to COD
@@ -76,20 +51,20 @@ def load_and_prepare_data():
     }
     df['type_encoded'] = df['type'].map(type_mapping)
     
-    # 2. Convert step to hour (step represents 1 hour intervals)
+    # step to hour
     df['hour'] = df['step'] % 24
     
-    # 3. Amount ratio - how much this deviates from average
+    # amount ratio
     avg_amount = df['amount'].mean()
     df['amount_ratio'] = df['amount'] / avg_amount
     
-    # 4. Is high amount (> 2x average)
+    # high amount
     df['is_high_amount'] = (df['amount'] > 2 * avg_amount).astype(int)
     
-    # 5. Is unusual hour (0-5 AM)
+    # unusual hour
     df['is_unusual_hour'] = df['hour'].apply(lambda h: 1 if 0 <= h <= 5 else 0)
     
-    # 6. Balance change ratio (how much of balance was used)
+    # balance ratio
     df['balance_change_ratio'] = np.where(
         df['oldbalanceOrg'] > 0,
         (df['oldbalanceOrg'] - df['newbalanceOrig']) / df['oldbalanceOrg'],
@@ -97,7 +72,7 @@ def load_and_prepare_data():
     )
     df['balance_change_ratio'] = df['balance_change_ratio'].clip(-1, 1)
     
-    # Select features for the model
+    # select features
     feature_columns = [
         'amount',
         'type_encoded',
@@ -110,7 +85,7 @@ def load_and_prepare_data():
     
     print(f"   Features: {feature_columns}")
     
-    # Handle missing values
+    # handle nulls
     df = df.dropna(subset=feature_columns + ['isFraud'])
     
     X = df[feature_columns].values
@@ -126,13 +101,13 @@ def load_and_prepare_data():
 
 
 def train_model(X, y, feature_names):
-    """Train the fraud detection classifier"""
+    """Train fraud classifier"""
     
     print("\n" + "=" * 60)
     print("🤖 Training Fraud Detection Model")
     print("=" * 60)
     
-    # Split data (80% train, 20% test)
+    # split data
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=42, stratify=y
     )
@@ -142,7 +117,7 @@ def train_model(X, y, feature_names):
     print(f"   Fraud in train: {y_train.sum()} ({y_train.mean()*100:.2f}%)")
     print(f"   Fraud in test: {y_test.sum()} ({y_test.mean()*100:.2f}%)")
     
-    # Train Random Forest Classifier
+    # train classifier
     print("\n   Training Random Forest Classifier...")
     model = RandomForestClassifier(
         n_estimators=100,
@@ -156,7 +131,7 @@ def train_model(X, y, feature_names):
     
     model.fit(X_train, y_train)
     
-    # Evaluate
+    # evaluate model
     y_pred = model.predict(X_test)
     y_proba = model.predict_proba(X_test)[:, 1]
     
@@ -173,7 +148,7 @@ def train_model(X, y, feature_names):
     print(f"   [[TN={cm[0][0]}, FP={cm[0][1]}]")
     print(f"    [FN={cm[1][0]}, TP={cm[1][1]}]]")
     
-    # Feature importance
+    # feature importance
     print(f"\n📊 Feature Importance:")
     importances = model.feature_importances_
     for name, importance in sorted(zip(feature_names, importances), key=lambda x: x[1], reverse=True):
@@ -184,7 +159,7 @@ def train_model(X, y, feature_names):
 
 
 def save_model(model, feature_names, accuracy):
-    """Save the trained model and metadata"""
+    """Save fraud model"""
     
     print(f"\n💾 Saving model to {MODEL_PATH}...")
     
@@ -212,7 +187,7 @@ def save_model(model, feature_names, accuracy):
     joblib.dump(model_data, MODEL_PATH)
     print(f"✅ Model saved successfully!")
     
-    # Verify
+    # verify saved
     loaded = joblib.load(MODEL_PATH)
     print(f"   Model type: {loaded['model_type']}")
     print(f"   Features: {loaded['feature_names']}")
@@ -220,26 +195,26 @@ def save_model(model, feature_names, accuracy):
 
 
 def main():
-    """Main training pipeline"""
+    """Training pipeline"""
     
     print("\n" + "🚨" * 30)
     print("  NEO-CNS FRAUD DETECTION MODEL TRAINING")
     print("🚨" * 30)
     
-    # Step 1: Load and prepare data
+    # load data
     X, y, feature_names = load_and_prepare_data()
     
     if X is None:
         print("\n❌ Training aborted: No data available")
         return
     
-    # Step 2: Train model
+    # train model
     model, accuracy = train_model(X, y, feature_names)
     
-    # Step 3: Save model
+    # save model
     save_model(model, feature_names, accuracy)
     
-    # Step 4: Test with sample predictions
+    # test predictions
     print("\n" + "=" * 60)
     print("🧪 Sample Predictions")
     print("=" * 60)

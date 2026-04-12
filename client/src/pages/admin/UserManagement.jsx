@@ -11,7 +11,7 @@ export default function UserManagement() {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
     const [roleFilter, setRoleFilter] = useState("");
-    const [statusFilter, setStatusFilter] = useState("active"); // "all", "active", "inactive", "deleted"
+    const [statusFilter, setStatusFilter] = useState("active");
     const [editModal, setEditModal] = useState({ show: false, user: null });
     const [editForm, setEditForm] = useState({});
 
@@ -22,7 +22,7 @@ export default function UserManagement() {
     const fetchUsers = async () => {
         try {
             setLoading(true);
-            // Include deleted users when viewing deleted tab
+            // include deleted
             const includeDeleted = statusFilter === "deleted" || statusFilter === "all";
             const res = await authFetch(`/users${includeDeleted ? "?includeDeleted=true" : ""}`);
             const data = await res.json();
@@ -46,7 +46,7 @@ export default function UserManagement() {
             const res = await authFetch(`/users/${userId}`, { method: "DELETE" });
             if (res.ok) {
                 toast.success("User deleted successfully");
-                fetchUsers(); // Refresh to update counts
+                fetchUsers();
             } else {
                 const data = await res.json();
                 toast.error(data.message || "Failed to delete user");
@@ -66,7 +66,7 @@ export default function UserManagement() {
             const data = await res.json();
             if (res.ok) {
                 toast.success(data.message);
-                fetchUsers(); // Refresh list
+                fetchUsers();
             } else {
                 toast.error(data.message || "Failed to restore user");
             }
@@ -145,13 +145,13 @@ export default function UserManagement() {
         }
     };
 
-    // Filter users based on status and search
+    // filter users
     const filteredUsers = users.filter(user => {
         const matchesSearch = user.name.toLowerCase().includes(search.toLowerCase()) ||
             user.email.toLowerCase().includes(search.toLowerCase());
         const matchesRole = !roleFilter || user.role === roleFilter;
 
-        // Status filter
+        // status filter
         let matchesStatus = true;
         if (statusFilter === "active") {
             matchesStatus = user.isActive && !user.deletedAt;
@@ -164,7 +164,7 @@ export default function UserManagement() {
         return matchesSearch && matchesRole && matchesStatus;
     });
 
-    // Count stats
+    // count stats
     const stats = {
         all: users.length,
         active: users.filter(u => u.isActive && !u.deletedAt).length,
@@ -174,8 +174,8 @@ export default function UserManagement() {
 
     if (loading) {
         return (
-            <div className="admin-container text-center py-5">
-                <div className="spinner-border text-primary" role="status">
+            <div className="admin-container admin-loading-state text-center py-5">
+                <div className="spinner-border" role="status">
                     <span className="visually-hidden">Loading...</span>
                 </div>
             </div>
@@ -184,10 +184,15 @@ export default function UserManagement() {
 
     return (
         <div className="admin-container">
-            <h2 className="mb-4">
-                <FontAwesomeIcon icon={faUserShield} className="me-2" />
-                User Management
-            </h2>
+            <header className="admin-page-head">
+                <div>
+                    <h1>
+                        <FontAwesomeIcon icon={faUserShield} className="me-2" aria-hidden />
+                        User management
+                    </h1>
+                    <p className="admin-subtitle">Roles, activity, and account status</p>
+                </div>
+            </header>
 
             {/* Status Filter Tabs */}
             <div className="filter-tabs mb-4">
@@ -224,13 +229,13 @@ export default function UserManagement() {
             {/* Search and Filter */}
             <div className="admin-search">
                 <div className="position-relative flex-grow-1">
-                    <FontAwesomeIcon icon={faSearch} className="position-absolute" style={{ left: '12px', top: '12px', color: '#999' }} />
+                    <FontAwesomeIcon icon={faSearch} className="admin-search-icon" aria-hidden />
                     <input
                         type="text"
-                        placeholder="Search by name or email..."
+                        className="admin-search-input w-100"
+                        placeholder="Search by name or email…"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        style={{ paddingLeft: '40px' }}
                     />
                 </div>
                 <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
@@ -243,7 +248,7 @@ export default function UserManagement() {
 
             {/* Users Table */}
             <div className="admin-card">
-                <div className="admin-card-body">
+                <div className="admin-card-body admin-table-wrap">
                     <table className="admin-table">
                         <thead>
                             <tr>
