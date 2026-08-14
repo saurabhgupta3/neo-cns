@@ -3,23 +3,27 @@ require("dotenv").config();
 
 const app = require("./app");
 
-main()
-    .then(() => {
-        console.log("Connected to MongoDB");
-    })
-    .catch((err) => {
-        console.error("MongoDB connection error:", err);
-    });
+const PORT = process.env.PORT || 5000;
 
 async function main() {
-    await mongoose.connect(process.env.MONGO_URL);
+    try {
+        console.log("Connecting to MongoDB...");
+
+        await mongoose.connect(process.env.MONGO_URL, {
+            serverSelectionTimeoutMS: 10000
+        });
+
+        console.log("✅ Connected to MongoDB");
+
+        app.listen(PORT, () => {
+            console.log(`🚀 Server is running on port ${PORT}`);
+        });
+
+    } catch (err) {
+        console.error("❌ MongoDB connection error:");
+        console.error(err);
+        process.exit(1);
+    }
 }
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-    console.log(`API endpoints:`);
-    console.log(`   - Auth:   http://localhost:${PORT}/api/auth`);
-    console.log(`   - Orders: http://localhost:${PORT}/api/orders`);
-    console.log(`   - Users:  http://localhost:${PORT}/api/users`);
-});
+main();
